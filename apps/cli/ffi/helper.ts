@@ -1,5 +1,5 @@
 import { dlopen, FFIType, suffix } from "bun:ffi";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { ISSUES_URL, RELEASES_URL } from "./constants";
 
 type Environment = "development" | "production";
@@ -11,10 +11,17 @@ const PLATFORM_MAP: Record<string, string> = {
   "win32-x64": "win32-x64",
 };
 
-// `import.meta.dir` resolves to `/$bunfs/…` inside a Bun standalone binary.
-// This is a Bun-internal convention — update this check if it ever changes.
+// `import.meta.dir` resolves to `/$bunfs/…` (or `B:\~BUN\…` on Windows) inside
+// a Bun standalone binary. This is a Bun-internal convention — update this
+// check if it ever changes.
+const COMPILED_BINARY_ROOT = /^(\/\$bunfs\/|B:[\\/]~BUN[\\/])/;
+
+export function isCompiledBinaryPath(dir: string): boolean {
+  return COMPILED_BINARY_ROOT.test(dir);
+}
+
 function isCompiledBinary(): boolean {
-  return import.meta.dir.startsWith("/$bunfs/");
+  return isCompiledBinaryPath(import.meta.dir);
 }
 
 function getBaseDir(): string {
@@ -33,12 +40,12 @@ async function detectEnvironment(): Promise<Environment> {
     return "production";
   }
 
-  const prebuildsPath = `${import.meta.dir}/../prebuilds`;
+  const prebuildsPath = join(import.meta.dir, "..", "prebuilds");
   if (await Bun.file(prebuildsPath).exists()) {
     return "production";
   }
 
-  const turboJsonPath = `${import.meta.dir}/../../../turbo.json`;
+  const turboJsonPath = join(import.meta.dir, "..", "..", "..", "turbo.json");
   if (await Bun.file(turboJsonPath).exists()) {
     return "development";
   }
@@ -47,7 +54,7 @@ async function detectEnvironment(): Promise<Environment> {
 }
 
 function getRunnerPath(): string {
-  return `${import.meta.dir}/../../../packages/runner`;
+  return join(import.meta.dir, "..", "..", "..", "packages", "runner");
 }
 
 function getLibraryName(): string {
@@ -78,9 +85,9 @@ async function findLibraryInProduction(
 ): Promise<string | null> {
   const baseDir = getBaseDir();
   const searchPaths = [
-    `${baseDir}/${libName}`,
-    `${baseDir}/../lib/${libName}`,
-    `${baseDir}/../prebuilds/${targetPlatform}/${libName}`,
+    join(baseDir, libName),
+    join(baseDir, "..", "lib", libName),
+    join(baseDir, "..", "prebuilds", targetPlatform, libName),
   ];
 
   for (const candidate of searchPaths) {
@@ -99,9 +106,9 @@ async function findLibraryInDevelopment(
   const runnerPath = getRunnerPath();
 
   const paths = [
-    `${runnerPath}/target/release/${libName}`,
-    `${runnerPath}/target/debug/${libName}`,
-    `${runnerPath}/prebuilt/${targetPlatform}/${libName}`,
+    join(runnerPath, "target", "release", libName),
+    join(runnerPath, "target", "debug", libName),
+    join(runnerPath, "prebuilt", targetPlatform, libName),
   ];
 
   for (const path of paths) {
