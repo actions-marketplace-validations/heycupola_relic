@@ -55,7 +55,7 @@ detect_os() {
   case "$_os" in
     Linux)  echo "linux" ;;
     Darwin) echo "darwin" ;;
-    MINGW* | MSYS* | CYGWIN*) err "Windows is not supported by the install script. Use 'npm install -g relic' or download from https://github.com/${REPO}/releases" ;;
+    MINGW* | MSYS* | CYGWIN*) err "use the PowerShell installer on Windows: irm https://withrelic.com/install.ps1 | iex" ;;
     *) err "unsupported operating system: $_os" ;;
   esac
 }
