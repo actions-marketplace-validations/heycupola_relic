@@ -4,6 +4,7 @@ description = "The Relic runner for injecting secrets into local processes. Encr
 authors = ["Can Vardar <https://github.com/heycupola/relic>"]
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.82"
 license = "MIT"
 
 [dependencies]
@@ -11,6 +12,9 @@ libc = "0.2.182"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 zeroize = "1.8.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = ["Win32_System_Console"] }
 
 [lib]
 crate-type = ["cdylib"]
