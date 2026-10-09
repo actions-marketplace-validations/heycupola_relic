@@ -101,7 +101,11 @@ By default the command starts with a **clean environment**: only the decrypted s
 Use `--inherit-env` when the command needs your shell or CI environment. The full environment is passed through, minus Relic's own variables (`RELIC_PASSWORD`, `RELIC_API_KEY`, `RELIC_SERVICE_TOKEN`, ...). If a secret has the same name as an existing variable, the secret wins.
 
 <Note>
-  On Windows the command currently inherits the full environment in both modes.
+  On Windows the clean environment keeps the system variables programs need (`PATH`, `PATHEXT`,
+  `SYSTEMROOT`, `TEMP`, `USERPROFILE`, `APPDATA`, ...); see the [full
+  list](/development/runner#environment-allowlist). Commands are resolved through `PATHEXT`, so
+  `npm` finds `npm.cmd`. Shell built-ins like `echo` need `cmd /c`, and PowerShell scripts need
+  `pwsh -File`. See [Windows behavior](/development/runner#windows-behavior).
 </Note>
 
 #### Exit codes
@@ -128,7 +132,7 @@ relic mcp
 
 ### `relic upgrade`
 
-Upgrade Relic using the method it was installed with (Homebrew, npm, Bun, or the `curl` install script). If the method can't be detected, the manual commands are printed.
+Upgrade Relic using the method it was installed with (Homebrew, npm, Bun, Scoop, or the install script). On Windows, npm, Bun, and Scoop can't replace `relic.exe` while it runs, so `relic upgrade` prints the command to run instead; installs from the PowerShell installer upgrade in place. If the method can't be detected, the manual commands are printed.
 
 ```bash
 relic upgrade
