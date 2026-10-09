@@ -2,6 +2,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { decryptPrivateKeyWithPassword } from "@repo/crypto";
 import { CONFIG_DIR, KEYCHAIN_SERVICE } from "./paths";
+import { restrictToCurrentUser } from "./permissions";
 
 const PASSWORD_FILE = resolve(CONFIG_DIR, "password");
 const PASSWORD_METADATA_FILE = resolve(CONFIG_DIR, "password-meta.json");
@@ -150,7 +151,9 @@ async function savePasswordToStorage(password: string): Promise<void> {
 
   try {
     await ensureConfigDir();
-    await Bun.write(PASSWORD_FILE, password);
+    const { writeFile } = await import("node:fs/promises");
+    await writeFile(PASSWORD_FILE, password, { mode: 0o600 });
+    await restrictToCurrentUser(PASSWORD_FILE);
   } catch (error) {
     throw new Error(`Failed to save password: ${error}`);
   }

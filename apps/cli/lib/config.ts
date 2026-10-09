@@ -1,5 +1,6 @@
 import { mkdir } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { homedir } from "node:os";
+import { dirname, join, parse as parsePath, resolve } from "node:path";
 import { parse, stringify } from "smol-toml";
 
 const CONFIG_FILE = "relic.toml";
@@ -59,8 +60,8 @@ export async function saveConfig(config: RelicConfig, dir?: string): Promise<str
 
 export async function findConfig(startDir?: string): Promise<ConfigResult | null> {
   let currentDir = resolve(startDir ?? process.cwd());
-  const root = resolve("/");
-  const home = process.env.HOME ? resolve(process.env.HOME) : null;
+  const root = parsePath(currentDir).root;
+  const home = resolve(homedir());
 
   while (currentDir !== root) {
     const configPath = join(currentDir, CONFIG_FILE);
