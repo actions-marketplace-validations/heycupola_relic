@@ -27,6 +27,9 @@ async function runHook(repo: TempRepo, hookPath: string, path: string) {
   return { stdout, stderr, code };
 }
 
+// Git for Windows runs hooks through its bundled sh; these tests execute the hook directly.
+const testUnix = test.skipIf(process.platform === "win32");
+
 describe("git pre-commit hook", () => {
   let repo: TempRepo;
   let hooksDir: string;
@@ -40,7 +43,7 @@ describe("git pre-commit hook", () => {
     await repo.cleanup();
   });
 
-  test("installs an executable hook and uninstalls it", async () => {
+  testUnix("installs an executable hook and uninstalls it", async () => {
     expect(await installGitHook(hooksDir)).toBe("installed");
     const hookPath = join(hooksDir, "pre-commit");
     const script = await readFile(hookPath, "utf-8");
@@ -66,7 +69,7 @@ describe("git pre-commit hook", () => {
     expect(await stat(join(hooksDir, "pre-commit.pre-relic")).catch(() => null)).toBeNull();
   });
 
-  test("runs the chained hook first and stops when it fails", async () => {
+  testUnix("runs the chained hook first and stops when it fails", async () => {
     const bin = join(repo.dir, ".bin");
     await mkdir(bin);
     await writeFile(join(bin, "relic"), '#!/bin/sh\necho relic-ran "$@"\n', { mode: 0o755 });
@@ -88,7 +91,7 @@ describe("git pre-commit hook", () => {
     expect(fail.stdout).toBe("");
   });
 
-  test("warns and lets the commit through when relic is not on PATH", async () => {
+  testUnix("warns and lets the commit through when relic is not on PATH", async () => {
     await installGitHook(hooksDir);
     const result = await runHook(repo, join(hooksDir, "pre-commit"), "/usr/bin:/bin");
     expect(result.code).toBe(0);

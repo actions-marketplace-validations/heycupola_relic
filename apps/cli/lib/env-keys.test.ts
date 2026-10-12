@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import {
   compileIgnore,
   listScanFiles,
@@ -195,7 +195,7 @@ describe("listScanFiles", () => {
   });
 
   const relativeFiles = async () =>
-    (await listScanFiles([root])).map((file) => relative(root, file)).sort();
+    (await listScanFiles([root])).map((file) => relative(root, file).split(sep).join("/")).sort();
 
   test("walks directories without git, honoring .gitignore and skipping build output", async () => {
     expect(await relativeFiles()).toEqual(["src/app.py", "src/index.ts"]);

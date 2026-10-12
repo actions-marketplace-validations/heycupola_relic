@@ -43,7 +43,7 @@ The session is stored as a JSON file:
 | macOS / Linux | `~/.config/relic/session.json` |
 | Windows       | `%APPDATA%\relic\session.json` |
 
-The config directory is created with `0700` permissions (owner-only access).
+On macOS and Linux, the config directory is created with `0700` permissions (owner-only access). On Windows, `%APPDATA%\relic` inherits the permissions of your user profile, which allow your account, `SYSTEM`, and the `Administrators` group. `%APPDATA%` is the roaming profile folder, so in domain environments with roaming profiles the session follows you between machines.
 
 ### Lifecycle
 

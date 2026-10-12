@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createFakeDeps } from "./test-helpers";
+import { createFakeDeps, toFakePath } from "./test-helpers";
 import { PlatformAuthError, PushExitCode, PushUsageError } from "./types";
 import {
   parseVercelTargets,
@@ -13,24 +13,29 @@ const AUTH_JSON = JSON.stringify({ token: "vca_cli_token" });
 
 describe("vercelAuthFilePaths", () => {
   test("uses the documented XDG data locations per OS", () => {
-    expect(vercelAuthFilePaths(createFakeDeps({ platform: "darwin" }).deps)[0]).toBe(
+    expect(toFakePath(vercelAuthFilePaths(createFakeDeps({ platform: "darwin" }).deps)[0]!)).toBe(
       "/home/dev/Library/Application Support/com.vercel.cli/auth.json",
     );
-    expect(vercelAuthFilePaths(createFakeDeps({ platform: "linux" }).deps)[0]).toBe(
+    expect(toFakePath(vercelAuthFilePaths(createFakeDeps({ platform: "linux" }).deps)[0]!)).toBe(
       "/home/dev/.local/share/com.vercel.cli/auth.json",
     );
     expect(
-      vercelAuthFilePaths(
-        createFakeDeps({ platform: "win32", env: { APPDATA: "/Users/dev/AppData/Roaming" } }).deps,
-      )[0],
+      toFakePath(
+        vercelAuthFilePaths(
+          createFakeDeps({ platform: "win32", env: { APPDATA: "/Users/dev/AppData/Roaming" } })
+            .deps,
+        )[0]!,
+      ),
     ).toBe("/Users/dev/AppData/Roaming/xdg.data/com.vercel.cli/auth.json");
-    expect(vercelAuthFilePaths(createFakeDeps({ env: { XDG_DATA_HOME: "/data" } }).deps)[0]).toBe(
-      "/data/com.vercel.cli/auth.json",
-    );
+    expect(
+      toFakePath(vercelAuthFilePaths(createFakeDeps({ env: { XDG_DATA_HOME: "/data" } }).deps)[0]!),
+    ).toBe("/data/com.vercel.cli/auth.json");
   });
 
   test("falls back to the legacy ~/.now directory", () => {
-    expect(vercelAuthFilePaths(createFakeDeps().deps)).toContain("/home/dev/.now/auth.json");
+    expect(vercelAuthFilePaths(createFakeDeps().deps).map(toFakePath)).toContain(
+      "/home/dev/.now/auth.json",
+    );
   });
 });
 

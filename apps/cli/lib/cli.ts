@@ -36,6 +36,15 @@ export function parseConvexError(err: unknown): { code?: string; message: string
   return { message: getErrorMessage(err) };
 }
 
+export function formatRunErrorMessage(err: unknown): string {
+  const parsed = parseConvexError(err);
+  if (parsed.code === "ENVIRONMENT_NOT_FOUND") {
+    const base = parsed.message.trim().replace(/[.!?]+$/, "");
+    return `${base}. Open the TUI with \`relic\` to create it, or use \`relic run -e <name>\` with an existing environment.`;
+  }
+  return parsed.message;
+}
+
 /** True only for real authentication failures (local session/JWT or a backend UNAUTHORIZED). */
 export function isAuthError(err: unknown): boolean {
   if (err instanceof AuthenticationError) return true;

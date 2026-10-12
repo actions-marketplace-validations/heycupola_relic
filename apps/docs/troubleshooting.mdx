@@ -16,7 +16,7 @@ Solutions for common issues you may encounter while using Relic.
     ```
 
     <Tip>
-      Session data is stored at `~/.config/relic/session.json`. If the file is corrupted, delete it and log in again.
+      Session data is stored at `~/.config/relic/session.json` (`%APPDATA%\relic\session.json` on Windows). If the file is corrupted, delete it and log in again.
     </Tip>
 
   </Accordion>
@@ -117,7 +117,7 @@ When something isn't working, enable debug logs to get more information.
 
   </Step>
   <Step title="Check the log file">
-    Logs are written to `~/.config/relic/logs/`:
+    Logs are written to `~/.config/relic/logs/` (`%APPDATA%\relic\logs\` on Windows):
 
     | Mode | File |
     |------|------|
@@ -137,6 +137,67 @@ When something isn't working, enable debug logs to get more information.
   </Step>
 </Steps>
 
+## Windows
+
+Windows support is in beta. These are the differences you are most likely to run into.
+
+<AccordionGroup>
+  <Accordion title="'relic' is not recognized after installing">
+    The PowerShell installer adds `%USERPROFILE%\.relic\bin` to your user `PATH`, but terminals that were already open keep the old value. Open a new terminal window, or update the current session:
+
+    ```powershell
+    $env:Path = "$env:USERPROFILE\.relic\bin;$env:Path"
+    ```
+
+  </Accordion>
+
+  <Accordion title="Running scripts is disabled on this system">
+    Your execution policy blocks the installer. Run it with the policy bypassed for that one process:
+
+    ```powershell
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://withrelic.com/install.ps1 | iex"
+    ```
+
+  </Accordion>
+
+  <Accordion title="relic run cannot find my command">
+    The runner looks up commands in `PATH` using the extensions in `PATHEXT`, limited to `.com`, `.exe`, `.bat`, and `.cmd`. The current directory is not searched.
+
+    - For a script in the current directory, use a path: `relic run -e dev -- .\build.cmd`
+    - For `cmd.exe` built-ins such as `echo` or `set`, go through the shell. From PowerShell: `relic run -e dev -- cmd /c echo %API_URL%`
+    - For PowerShell scripts, call PowerShell: `relic run -e dev -- pwsh -File .\deploy.ps1`
+
+    The child process only inherits a fixed set of system variables. See the [runner environment allowlist](/development/runner#environment-allowlist). If your tool needs another variable from your shell, store it as a Relic secret.
+
+  </Accordion>
+
+  <Accordion title="relic upgrade prints a command instead of upgrading">
+    Windows does not allow a running `relic.exe` to be replaced. If you installed with npm, Bun, or Scoop, `relic upgrade` prints the command to run once it exits, for example:
+
+    ```powershell
+    npm install -g relic@latest
+    ```
+
+    Installs from the PowerShell installer upgrade in place: the installer moves the running binary aside to `relic.exe.old` and removes it on the next install.
+
+  </Accordion>
+
+  <Accordion title="TUI colors or layout look wrong">
+    Use [Windows Terminal](https://aka.ms/terminal), which is the default terminal on Windows 11. The legacy console host (`conhost.exe`) on older Windows 10 builds may render colors and box characters incorrectly.
+  </Accordion>
+
+  <Accordion title="Enable debug logs in PowerShell">
+    PowerShell sets environment variables differently from Unix shells:
+
+    ```powershell
+    $env:RELIC_LOG = "debug"
+    relic run -e development -- npm start
+    Get-Content -Wait "$env:APPDATA\relic\logs\relic.log"
+    ```
+
+  </Accordion>
+</AccordionGroup>
+
 ## Cache
 
 Relic caches data locally to reduce API calls. If you need to reset it:
@@ -144,7 +205,7 @@ Relic caches data locally to reduce API calls. If you need to reset it:
 | What to clear    | How                                                |
 | ---------------- | -------------------------------------------------- |
 | Project cache    | Delete `.relic/cache.db` in your project directory |
-| User key cache   | Delete `~/.config/relic/relic.db`                  |
+| User key cache   | Delete `~/.config/relic/relic.db` (`%APPDATA%\relic\relic.db` on Windows) |
 | Session and auth | Run `relic logout`                                 |
 
 <Warning>

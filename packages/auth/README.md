@@ -85,7 +85,7 @@ Authentication and session management for Relic. Handles device code OAuth, JWT 
 ## Password Priority
 
 1. `RELIC_PASSWORD` environment variable
-2. System keychain (`com.relic.tui`)
+2. System keychain (`com.relic.tui`): macOS Keychain, libsecret, or Windows Credential Manager
 3. `~/.config/relic/password` file
 
 ## Storage
@@ -97,6 +97,8 @@ Authentication and session management for Relic. Handles device code OAuth, JWT 
 | `relic.db`     | `~/.config/relic/` | SQLite with `user_keys` table                                                 |
 
 On Windows, `~/.config/relic/` is replaced with `%APPDATA%/relic/`.
+
+The `password` fallback is written with mode `0600` on Unix. On Windows, `restrictToCurrentUser` removes inherited ACEs and grants access only to the current user's SID via `icacls` (best-effort).
 
 ### Dev mode isolation
 

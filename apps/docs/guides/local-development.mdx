@@ -114,7 +114,7 @@ Pass `--force` to open a nested shell anyway. On macOS and Linux the nested shel
 
 ## Windows
 
-On Windows, `relic shell` starts `$SHELL` if it points to an existing executable, and otherwise falls back to `%COMSPEC%` (usually `cmd.exe`). As with `relic run` on Windows, the shell inherits your full environment instead of starting from a cleared one.
+On Windows, `relic shell` starts `$SHELL` if it points to an existing executable, and otherwise falls back to `%COMSPEC%` (usually `cmd.exe`). As with `relic run`, the shell starts from a cleared environment that keeps only the Windows system variables listed in [Runner](/development/runner#environment-allowlist); pass `--inherit-env` to keep your full environment.
 
 ## When to use `relic run` instead
 

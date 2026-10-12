@@ -191,7 +191,7 @@ describe("rotation commands", () => {
     logSpy.mockRestore();
     errorSpy.mockRestore();
     exitSpy.mockRestore();
-    process.exitCode = originalExitCode;
+    process.exitCode = originalExitCode ?? 0;
     delete process.env.RELIC_PROJECT_ID;
   });
 

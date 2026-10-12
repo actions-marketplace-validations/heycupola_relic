@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { stripVTControlCharacters } from "node:util";
 import {
   buildCheckReport,
   type CollectedKeys,
@@ -250,7 +251,7 @@ describe("formatCheckReport", () => {
       }),
     );
 
-    expect(output).toContain("✓ 1/1 required keys present");
+    expect(stripVTControlCharacters(output)).toContain("✓ 1/1 required keys present");
     expect(output).not.toContain("Missing");
   });
 });

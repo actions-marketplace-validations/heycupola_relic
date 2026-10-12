@@ -38,17 +38,23 @@ The server never sees your password or your unencrypted private key.
 
 The password is read in this order:
 
-| Priority | Source                                                                          | Use case                              |
-| -------- | ------------------------------------------------------------------------------- | ------------------------------------- |
-| 1        | `RELIC_PASSWORD` environment variable                                           | CI/CD pipelines                       |
-| 2        | System keychain (`com.relic.tui`, or `com.relic.tui.dev` in dev mode)           | macOS, Linux with keychain            |
-| 3        | `~/.config/relic/password` file (or `~/.config/relic-dev/password` in dev mode) | Fallback when keychain is unavailable |
+| Priority | Source                                                                          | Use case                                                                  |
+| -------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1        | `RELIC_PASSWORD` environment variable                                           | CI/CD pipelines                                                           |
+| 2        | System keychain (`com.relic.tui`, or `com.relic.tui.dev` in dev mode)           | macOS Keychain, Linux Secret Service (libsecret), Windows Credential Manager |
+| 3        | `password` file in the config directory (`relic-dev` in dev mode)              | Fallback when the keychain is unavailable                                 |
 
-When saving, Relic tries the system keychain first. If that succeeds, the file fallback is removed. If the keychain is unavailable, the password is written to the config file.
+The config directory is `~/.config/relic` on macOS and Linux and `%APPDATA%\relic` on Windows.
+
+When saving, Relic tries the system keychain first. If that succeeds, the file fallback is removed. If the keychain is unavailable, the password is written to the config file:
+
+- **macOS / Linux**: the file is created with `0600` permissions inside a `0700` directory.
+- **Windows**: Relic removes inherited permissions from the file and grants access only to your user account (using `icacls`). If that fails, the file keeps the default permissions of `%APPDATA%`, which allow your account, `SYSTEM`, and the `Administrators` group. Administrators can always take ownership of files on Windows, so treat the file fallback as weaker than Credential Manager.
 
 <Tip>
   On macOS, Relic uses the system keychain via `bun:secrets`, which means your master password is
-  protected by your login password and biometrics (Touch ID).
+  protected by your login password and biometrics (Touch ID). On Windows, the same API stores it in
+  Windows Credential Manager, protected by your Windows sign-in.
 </Tip>
 
 ### Future integrations
@@ -90,7 +96,7 @@ Master Password + Salt
 
 ### Local key cache
 
-Your encrypted private key and salt are cached locally at `~/.config/relic/relic.db` (SQLite, or `~/.config/relic-dev/relic.db` in dev mode). This avoids fetching keys from the server on every operation.
+Your encrypted private key and salt are cached locally at `~/.config/relic/relic.db` (`%APPDATA%\relic\relic.db` on Windows; SQLite, or `relic-dev` in dev mode). This avoids fetching keys from the server on every operation.
 
 The cache:
 
@@ -315,9 +321,9 @@ When a project key is rotated (e.g., after revoking a collaborator with rotation
 When `relic run` injects secrets into a process, the [Rust runner](/development/runner) provides additional protections:
 
 - **Memory zeroing**: Secret values use `Zeroizing<String>` and are wiped on drop
-- **Core dump prevention**: `RLIMIT_CORE` set to zero on Unix
-- **Environment isolation**: Child process starts with a cleared environment, only system variables are inherited
-- **Signal forwarding**: SIGTERM/SIGINT are forwarded to the child for graceful shutdown
+- **Core dump prevention**: `RLIMIT_CORE` set to zero on Unix. Windows has no per-process equivalent; local crash dumps are off unless Windows Error Reporting `LocalDumps` is configured
+- **Environment isolation**: Child process starts with a cleared environment on every platform, only an allowlist of system variables is inherited
+- **Signal forwarding**: SIGTERM/SIGINT are forwarded to the child for graceful shutdown on Unix. On Windows, Ctrl+C reaches the child directly and the runner waits for it to exit
 - **Buffer clearing**: TypeScript-side buffers are zeroed after the FFI call
 
 Secrets are never written to disk during injection.

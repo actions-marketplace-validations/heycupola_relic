@@ -38,7 +38,7 @@ import {
 } from "../lib/api";
 import {
   failWithUpgradePrompt,
-  getErrorMessage,
+  formatRunErrorMessage,
   NO_KEYS_MESSAGE,
   NO_PASSWORD_MESSAGE,
   NOT_LOGGED_IN_MESSAGE,
@@ -519,7 +519,7 @@ export async function failRun(spinner: Ora, err: unknown): Promise<never> {
     await failWithUpgradePrompt(spinner, err.message, err.upgradeUrl);
   }
 
-  spinner.fail(pc.red(getErrorMessage(err)));
+  spinner.fail(pc.red(formatRunErrorMessage(err)));
   return exitWithTelemetry(1);
 }
 

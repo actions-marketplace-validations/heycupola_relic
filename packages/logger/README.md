@@ -49,6 +49,8 @@ trackError("cli", error, { action: "decrypt_secret" });
 | `getConfigDir()` | Config directory (`~/.config/relic/`, or `~/.config/relic-dev/` in dev mode)         |
 | `getLogsDir()`   | Logs directory (`~/.config/relic/logs/`, or `~/.config/relic-dev/logs/` in dev mode) |
 
+On Windows, `~/.config/relic/` is replaced with `%APPDATA%\relic\`.
+
 ## Logging
 
 Built on [Consola](https://github.com/unjs/consola).
