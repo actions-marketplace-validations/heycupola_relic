@@ -66,7 +66,7 @@ describe("file sources", () => {
     const result = await readImportSource(undefined, OPTIONS, deps);
     expect(result.kind).toBe("file");
     expect(result.format).toBe("env");
-    expect(result.filePath).toBe("/project/.env");
+    expect(toFakePath(result.filePath!)).toBe("/project/.env");
     expect(result.items).toEqual([
       { key: "API_KEY", value: "abc", type: "string" },
       { key: "PORT", value: "3000", type: "number" },
