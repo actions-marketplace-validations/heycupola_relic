@@ -12,7 +12,7 @@ int32_t run_with_secrets(const char *command_json, const char *secrets_json);
 
 - `command_json`: JSON array of strings (command + arguments), e.g. `["npm", "run", "deploy"]`
 - `secrets_json`: JSON object of key-value pairs, e.g. `{"DATABASE_URL": "postgres://..."}`
-- Returns the child process exit code (0-255, or 128 + N when the child is killed by signal N), or `-1` on error
+- Returns the child process exit code, or `-1` on error. On Unix that's 0-255, or 128 + N when the child is killed by signal N; on Windows it's the full 32-bit exit code
 
 ## Security
 
@@ -24,19 +24,39 @@ Secret values are stored in `Zeroizing<String>` (from the `zeroize` crate). Memo
 
 On Unix, `RLIMIT_CORE` is set to zero before spawning the child process. This prevents core dumps that could leak secrets to disk.
 
+Windows has no per-process equivalent. Crash dumps are controlled by Windows Error Reporting, which does not write local dumps unless `LocalDumps` is configured in the registry.
+
 ### Environment Isolation
 
-On Unix, the child process starts with a cleared environment (`env_clear()`). Only a small allowlist of system variables is inherited:
+The child process starts with a cleared environment (`env_clear()`). Only a small allowlist of system variables is inherited. On Unix:
 
 ```
 PATH, HOME, USER, SHELL, TERM, LANG, LC_ALL, LC_CTYPE, TMPDIR, TZ
 ```
 
+On Windows (matched case-insensitively, original casing preserved):
+
+```
+PATH, PATHEXT, SYSTEMROOT, SYSTEMDRIVE, WINDIR, COMSPEC, TEMP, TMP, HOME,
+USERPROFILE, USERNAME, USERDOMAIN, HOMEDRIVE, HOMEPATH, APPDATA, LOCALAPPDATA,
+PROGRAMDATA, ALLUSERSPROFILE, PUBLIC, PROGRAMFILES, PROGRAMFILES(X86),
+PROGRAMW6432, COMMONPROGRAMFILES, COMMONPROGRAMFILES(X86), COMMONPROGRAMW6432,
+COMPUTERNAME, OS, NUMBER_OF_PROCESSORS, PROCESSOR_ARCHITECTURE,
+PROCESSOR_IDENTIFIER, PROCESSOR_LEVEL, PROCESSOR_REVISION, PSMODULEPATH, TERM,
+LANG, TZ
+```
+
 Secrets are then injected on top of this clean environment.
+
+### Program Resolution (Windows)
+
+`std::process::Command` only appends `.exe` when searching `PATH`, so `npm` would not find `npm.cmd`. On Windows the runner resolves bare names against the child's `PATH` and `PATHEXT` (restricted to `.com`, `.exe`, `.bat`, `.cmd`), skipping the current directory. `.bat` and `.cmd` files are launched through std's `cmd.exe` escaping, which rejects arguments it cannot quote safely.
 
 ### Signal Forwarding
 
-SIGTERM and SIGINT are intercepted and forwarded to the child process via a global `AtomicU32` PID, allowing the child to shut down gracefully.
+On Unix, SIGTERM and SIGINT are intercepted and forwarded to the child process via a global `AtomicU32` PID, allowing the child to shut down gracefully.
+
+On Windows, Ctrl+C and Ctrl+Break reach every process attached to the console, including the child. The runner registers a console control handler while the child runs so it ignores those events, waits for the child to exit, and returns its exit code.
 
 ### Key Validation
 
@@ -50,9 +70,11 @@ Secret keys are validated before injection:
 
 | Feature | Unix | Windows |
 |---------|------|---------|
-| Environment clearing | Yes (allowlist) | No (full inherit) |
-| Core dump prevention | Yes (`RLIMIT_CORE`) | No |
-| Signal forwarding | Yes (SIGTERM, SIGINT) | No |
+| Environment clearing | Yes (allowlist) | Yes (allowlist) |
+| Core dump prevention | Yes (`RLIMIT_CORE`) | No (Windows Error Reporting policy) |
+| Signal forwarding | Yes (SIGTERM, SIGINT) | Ctrl+C / Ctrl+Break delivered by the console; runner waits for the child |
+| `PATHEXT` resolution | n/a | Yes (`.com`, `.exe`, `.bat`, `.cmd`) |
+| Exit code | 0-255, `-1` if killed by a signal | Full 32-bit code as `i32` |
 | Secret injection | Yes | Yes |
 | Zeroizing | Yes | Yes |
 
@@ -96,6 +118,7 @@ Library search order:
 ## Dependencies
 
 - `libc` - Unix system calls (setrlimit, signal, kill)
+- `windows-sys` - Windows console control handler (`SetConsoleCtrlHandler`)
 - `serde` + `serde_json` - JSON deserialization
 - `zeroize` - Secure memory wiping
 

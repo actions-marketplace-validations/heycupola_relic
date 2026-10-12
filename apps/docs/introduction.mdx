@@ -16,6 +16,7 @@ Relic runs in the terminal. For the best experience with the TUI, use a modern t
 - [Kitty](https://sw.kovidgoyal.net/kitty)
 - [WezTerm](https://wezfurlong.org/wezterm)
 - [iTerm2](https://iterm2.com)
+- [Windows Terminal](https://aka.ms/terminal) (Windows)
 
 <Note>
   Other terminals work for the CLI, but may have rendering issues with colors and UI elements in the
@@ -29,6 +30,13 @@ Relic runs in the terminal. For the best experience with the TUI, use a modern t
     ```bash
     curl -fsSL https://withrelic.com/install | bash
     ```
+    Available on macOS and Linux.
+  </Tab>
+  <Tab title="PowerShell">
+    ```powershell
+    irm https://withrelic.com/install.ps1 | iex
+    ```
+    Available on Windows. Installs to `%USERPROFILE%\.relic\bin` (override with `RELIC_INSTALL_DIR`) and adds it to your user `PATH`.
   </Tab>
   <Tab title="Homebrew">
     ```bash
@@ -50,9 +58,13 @@ Relic runs in the terminal. For the best experience with the TUI, use a modern t
 
 You can also download prebuilt binaries from the [GitHub Releases](https://github.com/heycupola/relic/releases) page.
 
-<Warning>
-  Windows is not officially supported yet. You can use Relic through WSL, but expect issues.
-</Warning>
+<Note>
+  Windows support is in beta. Relic runs natively on Windows 10 and 11 (x64) and is tested in CI on
+  every change, including the [runner](/development/runner) and the PowerShell installer. ARM64
+  devices run the x64 build under emulation. See [Troubleshooting](/troubleshooting#windows) for
+  known differences, and [open an issue](https://github.com/heycupola/relic/issues/new) if
+  something does not work.
+</Note>
 
 ## How Relic Is Organized
 

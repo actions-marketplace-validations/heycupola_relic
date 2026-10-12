@@ -18,13 +18,14 @@ The runner is written in Rust (compiled as a C-compatible dynamic library) becau
     null-terminated C strings are passed: the command and the secrets.
   </Step>
   <Step title="Environment setup">
-    On Unix, the runner clears the child process environment entirely, then re-adds only essential
-    system variables (`PATH`, `HOME`, `USER`, `SHELL`, `TERM`, `LANG`, `LC_ALL`, `LC_CTYPE`,
-    `TMPDIR`, `TZ`). Secrets are injected on top.
+    The runner clears the child process environment entirely, then re-adds only an allowlist of
+    system variables (see [Environment allowlist](#environment-allowlist)). Secrets are injected on
+    top.
   </Step>
   <Step title="Process spawn">
-    The child process is spawned with the clean environment. The runner forwards SIGTERM and SIGINT
-    so your process can shut down gracefully.
+    The child process is spawned with the clean environment. On Unix, the runner forwards SIGTERM
+    and SIGINT so your process can shut down gracefully. On Windows, the runner resolves the command
+    through `PATHEXT` and waits through Ctrl+C so it can report your process's exit code.
   </Step>
   <Step title="Cleanup">
     After the child exits, secret values are zeroed in memory (via `Zeroizing`). The TypeScript side
@@ -38,25 +39,58 @@ The runner is written in Rust (compiled as a C-compatible dynamic library) becau
 | --------------------- | ----------------------------------------------------------- |
 | Memory zeroing        | Secret values wrapped in `Zeroizing<String>`, wiped on drop |
 | Core dump prevention  | `RLIMIT_CORE` set to zero on Unix                           |
-| Environment isolation | `env_clear()` with system variable allowlist (Unix)         |
-| Signal forwarding     | SIGTERM/SIGINT relayed to child via `AtomicU32` PID         |
+| Environment isolation | `env_clear()` with a per-platform system variable allowlist |
+| Signal forwarding     | SIGTERM/SIGINT relayed to child via `AtomicU32` PID (Unix)  |
 | Key validation        | Rejects empty keys, null bytes, and `=` in key names        |
 | Buffer clearing       | TypeScript buffers zeroed in `finally` block after FFI call |
 
+## Environment Allowlist
+
+Only these variables from your shell reach the child process. Anything else, such as tokens exported in your shell profile, is dropped unless it is also a Relic secret. Secrets with the same name override the inherited value.
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```text
+    PATH, HOME, USER, SHELL, TERM, LANG, LC_ALL, LC_CTYPE, TMPDIR, TZ
+    ```
+  </Tab>
+  <Tab title="Windows">
+    Matched case-insensitively, so `Path` and `PATH` are treated the same.
+
+    ```text
+    PATH, PATHEXT, SYSTEMROOT, SYSTEMDRIVE, WINDIR, COMSPEC, TEMP, TMP, HOME,
+    USERPROFILE, USERNAME, USERDOMAIN, HOMEDRIVE, HOMEPATH, APPDATA, LOCALAPPDATA,
+    PROGRAMDATA, ALLUSERSPROFILE, PUBLIC, PROGRAMFILES, PROGRAMFILES(X86),
+    PROGRAMW6432, COMMONPROGRAMFILES, COMMONPROGRAMFILES(X86), COMMONPROGRAMW6432,
+    COMPUTERNAME, OS, NUMBER_OF_PROCESSORS, PROCESSOR_ARCHITECTURE,
+    PROCESSOR_IDENTIFIER, PROCESSOR_LEVEL, PROCESSOR_REVISION, PSMODULEPATH, TERM,
+    LANG, TZ
+    ```
+
+    `SYSTEMROOT` is required by most Windows programs; without it, networking and many system libraries fail to load.
+
+  </Tab>
+</Tabs>
+
 ## Platform Support
 
-| Feature              | Unix            | Windows           |
-| -------------------- | --------------- | ----------------- |
-| Environment clearing | Yes (allowlist) | No (full inherit) |
-| Core dump prevention | Yes             | No                |
-| Signal forwarding    | Yes             | No                |
-| Secret injection     | Yes             | Yes               |
-| Memory zeroing       | Yes             | Yes               |
+| Feature              | macOS / Linux                     | Windows                                                      |
+| -------------------- | --------------------------------- | ------------------------------------------------------------ |
+| Environment clearing | Yes (allowlist)                   | Yes (allowlist)                                              |
+| Core dump prevention | Yes (`RLIMIT_CORE`)               | No. Crash dumps follow Windows Error Reporting settings      |
+| Interrupt handling   | SIGTERM/SIGINT forwarded to child | Ctrl+C/Ctrl+Break reach the child; the runner waits for exit |
+| Command resolution   | `PATH`                            | `PATH` × `PATHEXT` (`.com`, `.exe`, `.bat`, `.cmd`)          |
+| Exit code            | 0-255 (`-1` if killed by signal)  | Full 32-bit exit code                                        |
+| Secret injection     | Yes                               | Yes                                                          |
+| Memory zeroing       | Yes                               | Yes                                                          |
 
-<Note>
-  Windows support is limited. The child process inherits the full parent environment instead of
-  starting clean. Full Windows support with an environment allowlist is planned.
-</Note>
+### Windows behavior
+
+- **Command resolution**: `relic run -- npm start` finds `npm.cmd` the same way `cmd.exe` would, searching each `PATH` directory for the extensions in `PATHEXT`. The current directory is not searched, so use `.\build.cmd` for local scripts. Only `.com`, `.exe`, `.bat`, and `.cmd` files can be launched directly.
+- **Shell built-ins and scripts**: Commands such as `echo`, `dir`, and `set` are part of `cmd.exe`, not executables. Run them through a shell: `relic run -e dev -- cmd /c echo %API_URL%` or `relic run -e dev -- pwsh -File deploy.ps1`.
+- **Argument quoting**: Arguments are passed to the child exactly as your shell parsed them. `.bat` and `.cmd` files are launched through `cmd.exe` with escaping applied by the Rust standard library, which refuses arguments it cannot escape safely instead of running them.
+- **Ctrl+C**: Windows sends console interrupts to every process in the console, so your command receives Ctrl+C directly. The runner ignores the interrupt while your command runs and exits with your command's exit code once it stops.
+- **Crash dumps**: There is no per-process equivalent of `RLIMIT_CORE`. Windows does not write local crash dumps unless `LocalDumps` is configured under Windows Error Reporting.
 
 ## Prebuilt Binaries
 
@@ -78,7 +112,7 @@ cd packages/runner
 cargo build --release
 ```
 
-The compiled library will be at `target/release/librelic_runner.dylib` (macOS) or `target/release/librelic_runner.so` (Linux).
+The compiled library will be at `target/release/librelic_runner.dylib` (macOS), `target/release/librelic_runner.so` (Linux), or `target\release\relic_runner.dll` (Windows).
 
 ```bash
 cargo test           # Run tests

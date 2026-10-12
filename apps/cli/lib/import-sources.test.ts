@@ -7,6 +7,7 @@ import {
   type SourceDeps,
   type SourceOptions,
 } from "./import-sources";
+import { toFakePath } from "./push/test-helpers";
 
 const OPTIONS: SourceOptions = { environment: "production" };
 
@@ -26,7 +27,7 @@ function createDeps(overrides: Partial<SourceDeps> = {}): SourceDeps {
 }
 
 function files(map: Record<string, string>) {
-  return mock((path: string) => Promise.resolve(map[path] ?? null));
+  return mock((path: string) => Promise.resolve(map[toFakePath(path)] ?? null));
 }
 
 function fetchReturning(respond: (url: string) => Response) {
@@ -65,7 +66,7 @@ describe("file sources", () => {
     const result = await readImportSource(undefined, OPTIONS, deps);
     expect(result.kind).toBe("file");
     expect(result.format).toBe("env");
-    expect(result.filePath).toBe("/project/.env");
+    expect(toFakePath(result.filePath!)).toBe("/project/.env");
     expect(result.items).toEqual([
       { key: "API_KEY", value: "abc", type: "string" },
       { key: "PORT", value: "3000", type: "number" },

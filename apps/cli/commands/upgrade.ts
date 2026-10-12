@@ -6,11 +6,16 @@ import pc from "picocolors";
 import { exitWithTelemetry } from "../lib/telemetry";
 import pkg from "../package.json";
 import {
-  CURL_INSTALL_COMMAND,
+  canUpgradeInPlace,
   detectInstallMethodFromExecutablePath,
+  getLocateCommand,
+  getUpgradeCommand,
   type InstallMethod,
+  POWERSHELL_INSTALL_COMMAND,
+  parseLocateOutput,
   resolveExecutablePath,
   resolveRealPath,
+  SHELL_INSTALL_COMMAND,
 } from "./upgrade.install-method";
 
 function tryExec(cmd: string): Promise<string> {
@@ -38,22 +43,24 @@ async function detectInstallMethod(): Promise<{ method: InstallMethod; exePath: 
 }
 
 async function probeInstallMethod(): Promise<InstallMethod> {
-  try {
-    await tryExec("brew list relic 2>/dev/null");
-    return "homebrew";
-  } catch {
-    // not installed via homebrew
+  if (process.platform !== "win32") {
+    try {
+      await tryExec("brew list relic");
+      return "homebrew";
+    } catch {
+      // not installed via homebrew
+    }
   }
 
   try {
-    const result = await tryExec("npm list -g relic 2>/dev/null");
+    const result = await tryExec("npm list -g relic");
     if (result.includes("relic@")) return "npm";
   } catch {
     // not installed via npm
   }
 
   try {
-    const result = await tryExec("bun pm ls -g 2>/dev/null");
+    const result = await tryExec("bun pm ls -g");
     if (result.includes("relic@")) return "bun";
   } catch {
     // not installed via bun
@@ -66,8 +73,7 @@ async function warnAboutDuplicateInstallations(currentExe: string | null): Promi
   if (!currentExe) return;
 
   try {
-    const stdout = await tryExec("which -a relic 2>/dev/null");
-    const paths = [...new Set(stdout.trim().split("\n").filter(Boolean))];
+    const paths = parseLocateOutput(await tryExec(getLocateCommand()));
     if (paths.length <= 1) return;
 
     const currentResolved = resolveRealPath(currentExe);
@@ -113,27 +119,20 @@ async function getLatestVersion(): Promise<string | null> {
   }
 }
 
-const UPGRADE_COMMANDS: Record<Exclude<InstallMethod, "unknown">, string> = {
-  homebrew: "brew upgrade relic",
-  npm: "npm install -g relic@latest",
-  bun: "bun install -g relic@latest",
-  curl: CURL_INSTALL_COMMAND,
-};
-
 /** The install script honours `RELIC_INSTALL_DIR`; reuse the directory of the running binary. */
 function upgradeEnv(method: InstallMethod, exePath: string | null): NodeJS.ProcessEnv {
-  if (method !== "curl" || !exePath) return process.env;
+  if (method !== "script" || !exePath) return process.env;
   return { ...process.env, RELIC_INSTALL_DIR: dirname(dirname(exePath)) };
 }
 
 export default async function upgrade() {
   const spinner = ora("Checking for updates...").start();
-  const runningExe = resolveExecutablePath();
 
   const [{ method, exePath }, latestVersion] = await Promise.all([
     detectInstallMethod(),
     getLatestVersion(),
   ]);
+  const runningExe = exePath ?? executableCandidates()[0] ?? null;
 
   const currentVersion = pkg.version;
 
@@ -155,9 +154,13 @@ export default async function upgrade() {
       console.log();
     }
     console.log(`  ${pc.dim("Upgrade manually using one of:")}`);
-    console.log(`    ${pc.cyan("brew upgrade relic")}`);
+    if (process.platform === "win32") {
+      console.log(`    ${pc.cyan(POWERSHELL_INSTALL_COMMAND)}`);
+    } else {
+      console.log(`    ${pc.cyan("brew upgrade relic")}`);
+    }
     console.log(`    ${pc.cyan("npm install -g relic@latest")}`);
-    console.log(`    ${pc.cyan(CURL_INSTALL_COMMAND)}`);
+    if (process.platform !== "win32") console.log(`    ${pc.cyan(SHELL_INSTALL_COMMAND)}`);
     console.log();
     console.log(
       `  ${pc.dim("Or download from")} ${pc.white("https://github.com/heycupola/relic/releases")}`,
@@ -167,10 +170,24 @@ export default async function upgrade() {
     return;
   }
 
-  const upgradeCmd = UPGRADE_COMMANDS[method];
+  const upgradeCmd = getUpgradeCommand(method);
   const versionInfo = latestVersion
     ? `${pc.white(`v${currentVersion}`)} ${pc.dim("→")} ${pc.green(`v${latestVersion}`)}`
     : "";
+
+  if (!canUpgradeInPlace(method)) {
+    spinner.stop();
+    console.log();
+    if (latestVersion) {
+      console.log(`  ${pc.dim("Update available:")} ${versionInfo}`);
+      console.log();
+    }
+    console.log(`  ${pc.dim("Windows locks relic.exe while it runs. Upgrade with:")}`);
+    console.log(`    ${pc.cyan(upgradeCmd)}`);
+    console.log();
+    trackEvent("cli_command_executed", { command: "upgrade", method, in_place: false });
+    return;
+  }
 
   spinner.text = latestVersion
     ? `Upgrading ${versionInfo} via ${method}...`

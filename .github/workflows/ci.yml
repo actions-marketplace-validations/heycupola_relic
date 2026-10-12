@@ -67,3 +67,95 @@ jobs:
         env:
           NEXT_PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
           NEXT_PUBLIC_CONVEX_SITE_URL: https://placeholder.convex.site
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/runner/target
+          key: ${{ runner.os }}-ci-cargo-${{ hashFiles('packages/runner/Cargo.toml') }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint runner
+        working-directory: packages/runner
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test runner
+        working-directory: packages/runner
+        run: cargo test
+
+      - name: Build runner
+        working-directory: packages/runner
+        run: cargo build --release
+
+      - name: Test CLI and packages
+        run: bunx turbo run test --filter=@repo/cli --filter=@repo/auth --filter=@repo/logger --filter=@repo/crypto --filter=@repo/tui
+
+      - name: Smoke test runner from source
+        env:
+          DEV: "true"
+          RELIC_SMOKE_PARENT_ONLY: "1"
+        run: bun apps/cli/scripts/runner-smoke.ts
+
+      - name: Smoke test runner from a standalone binary
+        shell: pwsh
+        env:
+          RELIC_SMOKE_PARENT_ONLY: "1"
+        run: |
+          New-Item -ItemType Directory -Force -Path smoke | Out-Null
+          bun build --compile --target=bun-windows-x64 apps/cli/scripts/runner-smoke.ts --outfile smoke/runner-smoke.exe
+          Copy-Item packages/runner/target/release/relic_runner.dll smoke/
+          ./smoke/runner-smoke.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build standalone CLI
+        shell: pwsh
+        run: |
+          Push-Location apps/cli
+          bun run build
+          Pop-Location
+          bun build --compile --target=bun-windows-x64 apps/cli/dist/cli.js --outfile dist/relic.exe
+          ./dist/relic.exe --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Render PowerShell installer
+        shell: bash
+        run: bun -e 'const { GET } = await import("./apps/web/app/install.ps1/route.ts"); await Bun.write("install.ps1", await (await GET()).text());'
+
+      - name: Install with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $env:RELIC_INSTALL_DIR = Join-Path $env:RUNNER_TEMP "relic"
+          Get-Content -Raw ./install.ps1 | Invoke-Expression
+          & (Join-Path $env:RELIC_INSTALL_DIR "bin\relic.exe") --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Reinstall over an existing install with PowerShell 7
+        shell: pwsh
+        run: |
+          $env:RELIC_INSTALL_DIR = Join-Path $env:RUNNER_TEMP "relic"
+          ./install.ps1
+          & (Join-Path $env:RELIC_INSTALL_DIR "bin\relic.exe") --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

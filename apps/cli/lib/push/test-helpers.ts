@@ -25,6 +25,11 @@ export function fail(stderr: string, exitCode = 1): ExecResult {
   return { exitCode, stdout: "", stderr };
 }
 
+/** Fake files are keyed by POSIX paths; `join` and `resolve` produce `D:\\work\\...` on Windows. */
+export function toFakePath(path: string): string {
+  return path.replace(/\\/g, "/").replace(/^[A-Za-z]:/, "");
+}
+
 export function createFakeDeps(
   config: {
     files?: Record<string, string>;
@@ -62,8 +67,9 @@ export function createFakeDeps(
       return config.exec?.(call) ?? ok();
     }),
     which: (command) => config.binaries?.[command] ?? null,
-    readFile: async (path) => files[path] ?? null,
-    exists: async (path) => path in files || Object.values(config.binaries ?? {}).includes(path),
+    readFile: async (path) => files[toFakePath(path)] ?? null,
+    exists: async (path) =>
+      toFakePath(path) in files || Object.values(config.binaries ?? {}).includes(path),
     env: config.env ?? {},
     cwd: "/work",
     homedir: "/home/dev",
