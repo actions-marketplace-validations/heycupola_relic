@@ -4,7 +4,7 @@ import { doc } from "convex-helpers/validators";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
-import { assertProjectAccess } from "./lib/access";
+import { assertProjectAccess, assertProjectWriteAccess } from "./lib/access";
 import { alreadyExistsError, createError, ErrorCode, notFoundError } from "./lib/errors";
 import { generateSlug } from "./lib/helpers";
 import { protectedMutation, protectedQuery } from "./lib/middleware";
@@ -158,7 +158,7 @@ export const createSecret = protectedMutation({
     const projectResult = await getProjectOrThrow(ctx, environment.projectId);
     const project = projectResult as Doc<"project">;
 
-    await assertProjectAccess(ctx, project);
+    await assertProjectWriteAccess(ctx, project);
 
     await checkRateLimit(ctx, "write");
 
@@ -352,7 +352,7 @@ export const updateSecretBulk = protectedMutation({
 
     const project: Doc<"project"> = await getProjectOrThrow(ctx, environment.projectId);
 
-    await assertProjectAccess(ctx, project);
+    await assertProjectWriteAccess(ctx, project);
 
     await checkRateLimit(ctx, "write");
 
@@ -621,7 +621,7 @@ export const updateSecret = protectedMutation({
 
     const project = await getProjectOrThrow(ctx, secret.projectId);
 
-    await assertProjectAccess(ctx, project);
+    await assertProjectWriteAccess(ctx, project);
 
     await checkRateLimit(ctx, "write");
 
@@ -710,7 +710,7 @@ export const deleteSecret = protectedMutation({
 
     const project = await getProjectOrThrow(ctx, secret.projectId);
 
-    await assertProjectAccess(ctx, project);
+    await assertProjectWriteAccess(ctx, project);
 
     await checkRateLimit(ctx, "delete");
 

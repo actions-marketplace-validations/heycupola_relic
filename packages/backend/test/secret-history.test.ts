@@ -464,22 +464,26 @@ describe("Secret History", () => {
   });
 
   describe("Access control", () => {
-    test("collaborators can read history and roll back", async () => {
+    test("collaborators can read history but cannot roll back", async () => {
       await shareWithCollaborator();
       const secretId = await createSecret("API_KEY", "first");
-      await updateValue(collaborator, secretId, "second");
+      await updateValue(owner, secretId, "second");
 
       const history = await collaborator.asUser.query(api.secretHistory.getSecretHistory, {
         secretId,
       });
-      expect(history.versions[0]?.changedBy).toBe(collaborator.userId);
+      expect(history.versions[0]?.changedBy).toBe(owner.userId);
 
-      await collaborator.asUser.mutation(api.secretHistory.restoreSecretVersion, {
-        secretId,
-        version: 1,
-      });
+      await expectConvexError(
+        () =>
+          collaborator.asUser.mutation(api.secretHistory.restoreSecretVersion, {
+            secretId,
+            version: 1,
+          }),
+        ErrorCode.INSUFFICIENT_PERMISSION,
+      );
       const secret = await owner.asUser.query(api.secret.getSecret, { secretId });
-      expect(await decryptSecret(projectKey, secret.encryptedValue)).toBe("first");
+      expect(await decryptSecret(projectKey, secret.encryptedValue)).toBe("second");
     });
 
     test("non-members cannot read history or roll back", async () => {

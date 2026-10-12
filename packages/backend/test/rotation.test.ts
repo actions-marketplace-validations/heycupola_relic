@@ -493,18 +493,34 @@ describe("Secret Rotation Hygiene", () => {
   });
 
   describe("access control", () => {
-    test("collaborators can read status and set policies", async () => {
+    test("collaborators can read status but cannot set policies", async () => {
       const secretId = await createSecret("STRIPE_KEY");
-
-      await collaborator.asUser.mutation(api.rotation.setSecretRotationPolicy, {
+      await owner.asUser.mutation(api.rotation.setSecretRotationPolicy, {
         secretId,
         rotateEveryDays: 60,
       });
+
       const status = await collaborator.asUser.query(api.rotation.getProjectRotationStatus, {
         projectId,
       });
-
       expect(status.secrets[0]?.rotateEveryDays).toBe(60);
+
+      await expectConvexError(
+        () =>
+          collaborator.asUser.mutation(api.rotation.setSecretRotationPolicy, {
+            secretId,
+            rotateEveryDays: 30,
+          }),
+        ErrorCode.INSUFFICIENT_PERMISSION,
+      );
+      await expectConvexError(
+        () =>
+          collaborator.asUser.mutation(api.rotation.setEnvironmentRotationPolicy, {
+            environmentId,
+            rotateEveryDays: 30,
+          }),
+        ErrorCode.INSUFFICIENT_PERMISSION,
+      );
     });
 
     test("non-collaborators cannot read status or set policies", async () => {

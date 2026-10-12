@@ -4,7 +4,7 @@ import { doc } from "convex-helpers/validators";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
-import { assertProjectAccess } from "./lib/access";
+import { assertProjectAccess, assertProjectWriteAccess } from "./lib/access";
 import { alreadyExistsError, createError, ErrorCode, notFoundError } from "./lib/errors";
 import { generateSlug } from "./lib/helpers";
 import { protectedMutation, protectedQuery } from "./lib/middleware";
@@ -99,7 +99,7 @@ export const createEnvironment = protectedMutation({
   ): Promise<{ id: Id<"environment"> }> => {
     const project = await getProjectOrThrow(ctx, args.projectId);
 
-    await assertProjectAccess(ctx, project);
+    await assertProjectWriteAccess(ctx, project);
 
     await checkRateLimit(ctx, "write");
 
@@ -175,7 +175,7 @@ export const updateEnvironment = protectedMutation({
 
     const project = await getProjectOrThrow(ctx, environment.projectId);
 
-    await assertProjectAccess(ctx, project);
+    await assertProjectWriteAccess(ctx, project);
 
     await checkRateLimit(ctx, "write");
 
@@ -225,7 +225,7 @@ export const deleteEnvironment = protectedMutation({
 
     const project = await getProjectOrThrow(ctx, environment.projectId);
 
-    await assertProjectAccess(ctx, project);
+    await assertProjectWriteAccess(ctx, project);
 
     await checkRateLimit(ctx, "delete");
 

@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { components, internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
-import { assertProjectAccess, isProjectAccessible } from "./lib/access";
+import { assertProjectAccess, assertProjectWriteAccess, isProjectAccessible } from "./lib/access";
 import { createError, ErrorCode, notFoundError } from "./lib/errors";
 import { generateSlug } from "./lib/helpers";
 import { createLogger } from "./lib/logger";
@@ -266,7 +266,7 @@ export const setSecretRotationPolicy = protectedMutation({
       projectId: secret.projectId,
     });
 
-    await assertProjectAccess(ctx, project);
+    await assertProjectWriteAccess(ctx, project);
 
     await checkRateLimit(ctx, "write");
 
@@ -320,7 +320,7 @@ export const setEnvironmentRotationPolicy = protectedMutation({
       projectId: environment.projectId,
     });
 
-    await assertProjectAccess(ctx, project);
+    await assertProjectWriteAccess(ctx, project);
 
     await checkRateLimit(ctx, "write");
 

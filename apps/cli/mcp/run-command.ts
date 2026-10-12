@@ -184,7 +184,7 @@ export async function runCommandCaptured(options: RunCapturedOptions): Promise<R
     const err = finalizeOutput(stderr, options.secrets, maxChars);
     return {
       exitCode: proc.exitCode,
-      signal: proc.signalCode ?? null,
+      signal: proc.signalCode == null ? null : String(proc.signalCode),
       timedOut,
       stdout: out.text,
       stderr: err.text,
