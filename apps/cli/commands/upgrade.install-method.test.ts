@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { join, resolve } from "node:path";
 import {
   canUpgradeInPlace,
   detectInstallMethodFromExecutablePath,
@@ -31,10 +32,11 @@ describe("detectInstallMethodFromExecutablePath", () => {
   });
 
   test("detects an install script in a custom RELIC_INSTALL_DIR", () => {
-    const path = "/opt/tools/relic/bin/relic";
-    expect(
-      detectInstallMethodFromExecutablePath(path, { RELIC_INSTALL_DIR: "/opt/tools/relic" }),
-    ).toBe("script");
+    const installDir = resolve("/opt/tools/relic");
+    const path = join(installDir, "bin", "relic");
+    expect(detectInstallMethodFromExecutablePath(path, { RELIC_INSTALL_DIR: installDir })).toBe(
+      "script",
+    );
   });
 
   test("detects the install script location on Windows", () => {

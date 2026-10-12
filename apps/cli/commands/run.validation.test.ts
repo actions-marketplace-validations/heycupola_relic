@@ -168,7 +168,7 @@ describe("commandExists", () => {
   });
 
   test("checks explicit paths directly", () => {
-    expect(commandExists("/bin/sh", undefined)).toBe(true);
+    expect(commandExists(process.execPath, undefined)).toBe(true);
     expect(commandExists("./does-not-exist.sh", process.env.PATH)).toBe(false);
   });
 });

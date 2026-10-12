@@ -7,6 +7,7 @@ import {
   type SourceDeps,
   type SourceOptions,
 } from "./import-sources";
+import { toFakePath } from "./push/test-helpers";
 
 const OPTIONS: SourceOptions = { environment: "production" };
 
@@ -26,7 +27,7 @@ function createDeps(overrides: Partial<SourceDeps> = {}): SourceDeps {
 }
 
 function files(map: Record<string, string>) {
-  return mock((path: string) => Promise.resolve(map[path] ?? null));
+  return mock((path: string) => Promise.resolve(map[toFakePath(path)] ?? null));
 }
 
 function fetchReturning(respond: (url: string) => Response) {
