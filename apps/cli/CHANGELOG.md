@@ -1,5 +1,11 @@
 # @repo/cli
 
+## 0.10.2
+
+### Patch Changes
+
+- Clarify CLI, TUI, and MCP descriptions around end-to-end encrypted secrets for developers and AI agents.
+
 ## 0.10.1
 
 ### Patch Changes

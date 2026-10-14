@@ -5,7 +5,7 @@
 # Copy this file to that repo at Formula/relic.rb after creating it.
 
 class Relic < Formula
-  desc "End-to-end encrypted secret layer for developers"
+  desc "End-to-end encrypted secrets for developers and AI agents"
   homepage "https://withrelic.com"
   version "0.1.0"
   license "MIT"

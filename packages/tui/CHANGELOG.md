@@ -1,5 +1,11 @@
 # @repo/tui
 
+## 0.1.2
+
+### Patch Changes
+
+- Update header subtitle to "End-to-end encrypted secrets" on login and home screens.
+
 ## 0.1.1
 
 ### Patch Changes

@@ -26,14 +26,28 @@ export const CHANGELOG_DESCRIPTION =
 export const BLOG_FEED_PATH = "/blog/rss.xml";
 export const CHANGELOG_FEED_PATH = "/changelog/rss.xml";
 export const SITE_KEYWORDS = [
-  "secret layer",
+  "secret manager",
   "secrets management",
+  "end-to-end encrypted secrets",
+  "client-side encryption",
   "zero-knowledge",
   "encryption",
   "environment variables",
+  "dotenv alternative",
+  "no .env files",
+  "MCP server",
+  "AI agent secrets",
+  "Cursor secrets",
+  "Claude Code secrets",
+  "Vercel env sync",
+  "Cloudflare Workers secrets",
+  "Doppler alternative",
+  "Infisical alternative",
+  "dotenvx alternative",
   "CLI",
   "TUI",
   "CI/CD",
+  "OIDC",
   "AES-256",
   "Argon2id",
   "dotenv",
@@ -50,36 +64,42 @@ export const SITE_FAQS = [
   {
     question: "Can you see my secrets?",
     answer:
-      "No. Your secrets are encrypted on your device before anything is sent to us. We literally cannot read them. Only you hold the keys.",
+      "No. Every secret is encrypted on your device before it leaves your machine. Our servers only store ciphertext, and we cannot read or decrypt your values.",
   },
   {
-    question: "Where does my data go?",
+    question: "Can I use Relic with my existing .env files?",
     answer:
-      "Your secrets are encrypted on your machine, then stored safely on our servers. We only ever see encrypted data, never the real values.",
+      "Yes. You can paste .env contents directly into the TUI editor (just like Vim/Nano) or run relic import to bring in .env, JSON, Doppler, Infisical, Vercel, or 1Password secrets in seconds. From there, your variables are backed up with end-to-end encryption and ready to inject anywhere.",
   },
   {
-    question: "How secure is Relic?",
+    question: "How does Relic keep secrets safe from AI coding agents like Cursor or Claude Code?",
     answer:
-      "Very. We use the same encryption standards trusted by banks and governments (AES-256 + Argon2id). Everything is encrypted before it leaves your device.",
+      "When you inject secrets at runtime with relic run or our built-in MCP server (relic mcp), you don't need plaintext .env files sitting in your project folder where AI assistants can read or index them. Through MCP, AI agents can inspect key names and run tests or scripts with secrets injected while actual values are automatically redacted from output.",
+  },
+  {
+    question: "How is Relic different from Doppler, Infisical, or plain .env files?",
+    answer:
+      "Plain .env files are easy to lose, risky to share over Slack, and readable by any local process or AI tool, while traditional cloud secret managers can decrypt your data on their servers. Relic gives you the familiar .env editing experience in the terminal, but encrypts everything on your device, injects secrets in memory via a Rust runner, and includes leak guard, platform sync, and an MCP server out of the box.",
+  },
+  {
+    question:
+      "Can I push secrets directly to Vercel, Cloudflare Workers, GitHub Actions, or Fly.io?",
+    answer:
+      "Yes. Run relic push to decrypt an environment locally and sync it straight to your deployment platform's API or CLI with a clear diff plan (+, ~, -). Plaintext values never pass through our servers.",
   },
   {
     question: "Can I share secrets with my team?",
-    answer: `Yes, project sharing is a Pro feature. Invite teammates by email and they get access to the project, with ${PRO_COLLABORATORS_PER_PROJECT} collaborators per project included and $${EXTRA_COLLABORATOR_PRICE_USD}/month per extra collaborator. Each person's secrets are encrypted with their own keys, so sharing stays fully secure.`,
+    answer: `Yes, project sharing is a Pro feature. Invite teammates by email and they get access to the project, with ${PRO_COLLABORATORS_PER_PROJECT} collaborators per project included and $${EXTRA_COLLABORATOR_PRICE_USD}/month per extra collaborator. Each person's access is wrapped with their own public key, so sharing stays end-to-end encrypted.`,
   },
   {
     question: "Can I use Relic in CI/CD pipelines?",
     answer:
-      "Yes, with Pro. Service accounts, OIDC, and API keys let you plug Relic into GitHub Actions, GitLab CI, Jenkins, or any other CI/CD system without sharing personal credentials.",
+      "Yes, with Pro. Service accounts, OIDC trust policies, and API keys let you inject secrets in GitHub Actions, GitLab CI, or any pipeline without sharing personal credentials.",
   },
   {
-    question: "Do my secrets sync across devices?",
+    question: "Do my secrets sync across devices and languages?",
     answer:
-      "Yes, automatically. Your encrypted secrets sync through our servers, but since everything is encrypted on your device first, we never see the actual values.",
-  },
-  {
-    question: "Which programming languages are supported?",
-    answer:
-      "All of them. Relic is completely language agnostic. Any language, any framework. Just use relic run to inject secrets as environment variables into any process.",
+      "Yes. Encrypted secrets sync automatically across macOS, Linux, and Windows, and relic run works with any language or framework, including Node.js, Bun, Python, Go, Rust, and Docker.",
   },
 ] as const;
 

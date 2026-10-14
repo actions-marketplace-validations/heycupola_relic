@@ -73,7 +73,7 @@ Add this to your Zed `settings.json`:
 ```
 
 <Note>
-  Zed supports MCP Tools and Prompts only — Resources and Sampling are not yet implemented.
+  Zed supports MCP Tools and Prompts only. Resources and Sampling are not yet implemented.
 </Note>
 
 ### OpenCode
@@ -133,8 +133,8 @@ Lists secret key names, and scopes for a given project environment.
 | `folder`      | No       | Folder name                                     |
 
 <Warning>
-  This tool returns secret **names only** — never decrypted values. This is by design. Relic's
-  zero-knowledge model means secret values should never appear in an AI context window.
+  This tool returns secret **names only**, never decrypted values. This is by design. Because Relic
+  is end-to-end encrypted on your device, secret values should never appear in an AI context window.
 </Warning>
 
 ### `get-current-project`

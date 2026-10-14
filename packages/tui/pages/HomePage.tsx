@@ -436,7 +436,7 @@ export function HomePage() {
           </box>
           <box height={1} marginBottom={1} justifyContent="center" alignItems="center">
             <text>
-              <span fg={THEME_COLORS.textMuted}>The secrets layer</span>
+              <span fg={THEME_COLORS.textMuted}>End-to-end encrypted secrets</span>
               <span fg={THEME_COLORS.textDim}> · </span>
               {isLoadingPlan ? (
                 <span fg={THEME_COLORS.textDim}>...</span>

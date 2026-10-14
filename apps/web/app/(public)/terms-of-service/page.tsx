@@ -8,7 +8,7 @@ import { SITE_NAME, SITE_TWITTER_HANDLE } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "Terms of Service for Relic, a zero-knowledge secrets management platform by Cupola Labs, LLC.",
+    "Terms of Service for Relic, an end-to-end encrypted secrets management platform by Cupola Labs, LLC.",
   alternates: {
     canonical: "/terms-of-service",
   },
@@ -19,13 +19,13 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: "Terms of Service - Relic",
     description:
-      "Terms of Service for Relic, a zero-knowledge secrets management platform by Cupola Labs, LLC.",
+      "Terms of Service for Relic, an end-to-end encrypted secrets management platform by Cupola Labs, LLC.",
   },
   twitter: {
     card: "summary",
     title: "Terms of Service - Relic",
     description:
-      "Terms of Service for Relic, a zero-knowledge secrets management platform by Cupola Labs, LLC.",
+      "Terms of Service for Relic, an end-to-end encrypted secrets management platform by Cupola Labs, LLC.",
     creator: SITE_TWITTER_HANDLE,
     site: SITE_TWITTER_HANDLE,
   },
