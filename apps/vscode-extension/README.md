@@ -1,8 +1,13 @@
 # Relic for VS Code and Cursor
 
-Run, debug, and test your code with [Relic](https://withrelic.com) secrets injected. Nobody on your team needs a `.env` file.
+Run, debug, and test your code with [Relic](https://withrelic.com) secrets injected, without leaving plaintext `.env` files on disk.
 
-Relic is an end-to-end encrypted, zero-knowledge secrets layer. This extension never reads, shows, stores, or logs secret values. Everything that needs a value goes through the `relic` CLI, which decrypts on your machine and injects secrets straight into the process it starts. The extension only ever sees secret **names**.
+Relic is an end-to-end encrypted secrets manager for developers and AI agents. Everything is encrypted on your device before reaching the server, and this extension never reads, shows, stores, or logs secret values. Everything that needs a value goes through the `relic` CLI, which decrypts on your machine and injects secrets straight into the process it starts. The extension only ever sees secret **names**.
+
+## Install
+
+- [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=cupola.relic-vscode)
+- [Open VSX](https://open-vsx.org/extension/cupola/relic-vscode) for Cursor
 
 ## Requirements
 

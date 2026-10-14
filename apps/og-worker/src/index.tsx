@@ -12,7 +12,7 @@ const FG = "#fafaf9";
 const MUTED = "rgba(250, 250, 249, 0.52)";
 const HAIRLINE = "rgba(250, 250, 249, 0.08)";
 const CACHE_CONTROL = "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800";
-const CACHE_NAME = "relic-og-v3";
+const CACHE_NAME = "relic-og-v6";
 
 const FONTS = [
   { name: "Geist", data: geistSans400, weight: 400, style: "normal" },
@@ -31,9 +31,9 @@ interface OgImageOptions {
 const STATIC_IMAGES: Record<StaticPageType, OgImageOptions> = {
   home: {
     type: "home",
-    title: "The secrets layer developers actually trust",
+    title: "End-to-end encrypted secrets for developers and AI agents",
     description:
-      "Manage and share secrets. Encrypted on your device, never exposed to anyone else. Not even us.",
+      "Manage, share, and inject environment variables, encrypted on your device. Sync to Vercel, Cloudflare, and more, and keep secrets out of AI prompts.",
   },
   "blog-index": {
     type: "blog-index",

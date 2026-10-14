@@ -106,7 +106,7 @@ server.registerTool(
   "list-secrets",
   {
     description:
-      "List secret keys for a project environment. Returns names, scopes, and types only — never values.",
+      "List secret keys for a project environment. Returns names, scopes, and types only, never values.",
     annotations: { readOnlyHint: true, destructiveHint: false },
     inputSchema: {
       projectId: z.string().describe("Project ID"),

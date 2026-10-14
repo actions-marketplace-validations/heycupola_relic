@@ -11,17 +11,10 @@ import { openUrl } from "../utils/ui";
 
 const logger = createLogger("tui");
 
-const getShortcutGroups = (isLoading: boolean) => ({
-  primary: [
-    {
-      shortcuts: [
-        { key: KEY_SYMBOLS.enter, description: "sign in", disabled: isLoading },
-        { key: "q", description: "quit" },
-      ],
-    },
-  ],
+const SHORTCUT_GROUPS = {
+  primary: [{ shortcuts: [{ key: "q", description: "quit" }] }],
   secondary: [],
-});
+};
 
 interface LoginPageProps {
   onLogin: () => Promise<void>;
@@ -70,7 +63,7 @@ function getStatusColor(
     case "error":
       return THEME_COLORS.error;
     default:
-      return isLoading ? THEME_COLORS.primary : THEME_COLORS.textDim;
+      return isLoading ? THEME_COLORS.primary : THEME_COLORS.textMuted;
   }
 }
 
@@ -164,7 +157,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           </box>
 
           <box height={1} marginBottom={0} justifyContent="center" alignItems="center">
-            <text fg={THEME_COLORS.textMuted}>The secrets layer</text>
+            <text fg={THEME_COLORS.textMuted}>End-to-end encrypted secrets</text>
           </box>
 
           <box flexDirection="column" width={52} marginTop={1} gap={0}>
@@ -173,7 +166,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
           {!isModalOpen && (
             <box marginTop={1}>
-              <GuideBar groups={getShortcutGroups(isLoading)} customWidth={52} />
+              <GuideBar groups={SHORTCUT_GROUPS} customWidth={52} />
             </box>
           )}
         </box>

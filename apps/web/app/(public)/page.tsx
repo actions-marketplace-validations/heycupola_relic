@@ -60,10 +60,13 @@ const structuredData = {
       applicationCategory: "DeveloperApplication",
       operatingSystem: "Web, macOS, Linux, Windows",
       featureList: [
-        "Client-side encrypted secrets management",
-        "CLI, TUI, and web dashboard access",
-        "Encrypted secret sharing for teams",
-        "Secret injection for local workflows and CI/CD",
+        "End-to-end encrypted secrets management on your device",
+        "Memory-safe Rust runner with zero .env files on disk",
+        "Built-in MCP server for Cursor, Claude Code, Codex, and Zed",
+        "Direct secret sync to Vercel, Cloudflare Workers, GitHub Actions, and Fly.io",
+        "Leak guard pre-commit hooks, secret history, rollback, and key rotation",
+        "CLI, TUI, VS Code / Cursor extension, and web dashboard",
+        "Encrypted secret sharing for teams and OIDC CI/CD pipelines",
       ],
       offers: [
         {

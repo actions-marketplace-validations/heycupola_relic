@@ -1,6 +1,6 @@
 [package]
 name = "relic-runner"
-description = "The Relic runner for injecting secrets into local processes. Encrypted on your device, never exposed to anyone else. Not even us."
+description = "The Relic Rust runner for injecting end-to-end encrypted secrets into local processes without writing .env files to disk."
 authors = ["Can Vardar <https://github.com/heycupola/relic>"]
 version = "0.1.0"
 edition = "2021"

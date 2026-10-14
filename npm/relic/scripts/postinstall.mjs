@@ -19,7 +19,7 @@ const green = (t) => `\x1b[32m${t}\x1b[39m`;
 const lines = [
   "",
   `  ${bold("relic")} ${dim(`v${version}`)}`,
-  `  ${dim("Zero-knowledge secret layer for your projects")}`,
+  `  ${dim("End-to-end encrypted secrets for your projects")}`,
   "",
   `  ${green("✓")} Installed successfully`,
   "",

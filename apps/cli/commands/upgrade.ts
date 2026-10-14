@@ -86,7 +86,7 @@ async function warnAboutDuplicateInstallations(currentExe: string | null): Promi
     console.log();
     console.log(
       pc.yellow(
-        "  Multiple relic installs on PATH — you may still run an older copy in new shells.",
+        "  Multiple relic installs on PATH. You may still run an older copy in new shells.",
       ),
     );
     console.log(pc.dim(`  Upgraded via this binary: ${currentResolved}`));

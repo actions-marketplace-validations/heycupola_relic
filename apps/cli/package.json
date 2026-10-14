@@ -1,10 +1,15 @@
 {
   "name": "@repo/cli",
-  "version": "0.10.0",
+  "version": "0.10.2",
   "private": true,
-  "description": "The Relic CLI for managing and sharing secrets. Encrypted on your device, never exposed to anyone else. Not even us.",
+  "description": "End-to-end encrypted secrets for developers and AI agents. Manage, share, and inject environment variables, sync to Vercel, Cloudflare, and more, and keep secrets out of AI prompts.",
   "keywords": [
     "cli",
+    "dotenv",
+    "encryption",
+    "env",
+    "mcp",
+    "secrets",
     "tui"
   ],
   "license": "MIT",
