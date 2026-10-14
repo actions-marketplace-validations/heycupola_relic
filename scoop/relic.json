@@ -1,6 +1,6 @@
 {
   "version": "0.9.4",
-  "description": "End-to-end encrypted secret layer for developers",
+  "description": "End-to-end encrypted secrets for developers and AI agents",
   "homepage": "https://withrelic.com",
   "license": "MIT",
   "architecture": {

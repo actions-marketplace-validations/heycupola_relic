@@ -1,6 +1,6 @@
 # Relic
 
-Zero-knowledge secret layer for your projects. Encrypted on your device, never exposed to anyone else. Not even us.
+End-to-end encrypted secrets for developers and AI agents. Manage, share, and inject environment variables, encrypted on your device, synced directly to your deploy platforms, and hidden from AI prompts.
 
 ## Installation
 
@@ -50,40 +50,40 @@ relic guard scan --staged
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `relic` | Launch the TUI (default) |
-| `relic login` | Authenticate via device code flow |
-| `relic logout` | Clear session and cached data |
-| `relic whoami` | Show current user |
-| `relic projects` | List projects with environments and folders |
-| `relic init` | Create `relic.toml` for the current project |
-| `relic run` | Run a command with secrets injected |
-| `relic shell` | Open a subshell with secrets loaded |
-| `relic import` | Import secrets from a `.env`/JSON file, Doppler, Infisical, Vercel, or 1Password |
-| `relic push` | Sync secrets to Vercel, Cloudflare Workers, GitHub Actions, or Fly.io |
-| `relic check` | Check that required keys exist in an environment (names only) |
-| `relic guard scan` | Scan files, staged changes, or commits for leaked secrets |
-| `relic guard install` | Add a pre-commit hook that blocks leaks |
-| `relic guard uninstall` | Remove the guard pre-commit hook |
-| `relic secrets` | List secret names in an environment (never values) |
-| `relic history` | List previous versions of a secret |
-| `relic rollback` | Restore a previous version or a deleted secret |
-| `relic service-account` | Create, list, and revoke service accounts for CI/CD |
-| `relic mcp` | Start the MCP server for AI assistants |
-| `relic upgrade` | Upgrade to the latest version |
-| `relic version` | Print the installed version |
-| `relic telemetry` | Manage anonymous usage data collection |
+| Command                 | Description                                                                      |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| `relic`                 | Launch the TUI (default)                                                         |
+| `relic login`           | Authenticate via device code flow                                                |
+| `relic logout`          | Clear session and cached data                                                    |
+| `relic whoami`          | Show current user                                                                |
+| `relic projects`        | List projects with environments and folders                                      |
+| `relic init`            | Create `relic.toml` for the current project                                      |
+| `relic run`             | Run a command with secrets injected                                              |
+| `relic shell`           | Open a subshell with secrets loaded                                              |
+| `relic import`          | Import secrets from a `.env`/JSON file, Doppler, Infisical, Vercel, or 1Password |
+| `relic push`            | Sync secrets to Vercel, Cloudflare Workers, GitHub Actions, or Fly.io            |
+| `relic check`           | Check that required keys exist in an environment (names only)                    |
+| `relic guard scan`      | Scan files, staged changes, or commits for leaked secrets                        |
+| `relic guard install`   | Add a pre-commit hook that blocks leaks                                          |
+| `relic guard uninstall` | Remove the guard pre-commit hook                                                 |
+| `relic secrets`         | List secret names in an environment (never values)                               |
+| `relic history`         | List previous versions of a secret                                               |
+| `relic rollback`        | Restore a previous version or a deleted secret                                   |
+| `relic service-account` | Create, list, and revoke service accounts for CI/CD                              |
+| `relic mcp`             | Start the MCP server for AI assistants                                           |
+| `relic upgrade`         | Upgrade to the latest version                                                    |
+| `relic version`         | Print the installed version                                                      |
+| `relic telemetry`       | Manage anonymous usage data collection                                           |
 
 ### `relic run` options
 
-| Flag | Description |
-|------|-------------|
-| `-e, --environment` | Environment name (required) |
-| `-f, --folder` | Folder name |
-| `-s, --scope` | `client`, `server`, or `shared` |
-| `-p, --project` | Project ID (overrides `RELIC_PROJECT_ID` and `relic.toml`) |
-| `--inherit-env` | Pass the current environment (minus `RELIC_*`) to the command |
+| Flag                | Description                                                   |
+| ------------------- | ------------------------------------------------------------- |
+| `-e, --environment` | Environment name (required)                                   |
+| `-f, --folder`      | Folder name                                                   |
+| `-s, --scope`       | `client`, `server`, or `shared`                               |
+| `-p, --project`     | Project ID (overrides `RELIC_PROJECT_ID` and `relic.toml`)    |
+| `--inherit-env`     | Pass the current environment (minus `RELIC_*`) to the command |
 
 By default the command only receives the secrets plus `PATH`, `HOME`, `USER`, `SHELL`, `TERM`, `LANG`, `LC_ALL`, `LC_CTYPE`, `TMPDIR`, and `TZ`. Options after the command name are passed to the command; use `--` to separate them explicitly.
 
@@ -91,15 +91,15 @@ By default the command only receives the secrets plus `PATH`, `HOME`, `USER`, `S
 
 ### `relic push` options
 
-| Flag | Description |
-|------|-------------|
-| `-e, --environment` | Environment name (required) |
-| `-t, --target` | `vercel`, `cloudflare`, `github`, or `fly` (required) |
-| `-f, --folder` | Folder name |
-| `-s, --scope` | Comma separated: `client`, `server`, `shared` |
-| `--dry-run` | Print the plan (names only) and exit |
-| `--prune` | Delete platform secrets that are not in Relic |
-| `-y, --yes` | Skip confirmation (required in CI) |
+| Flag                | Description                                           |
+| ------------------- | ----------------------------------------------------- |
+| `-e, --environment` | Environment name (required)                           |
+| `-t, --target`      | `vercel`, `cloudflare`, `github`, or `fly` (required) |
+| `-f, --folder`      | Folder name                                           |
+| `-s, --scope`       | Comma separated: `client`, `server`, `shared`         |
+| `--dry-run`         | Print the plan (names only) and exit                  |
+| `--prune`           | Delete platform secrets that are not in Relic         |
+| `-y, --yes`         | Skip confirmation (required in CI)                    |
 
 See [Platform Sync](https://docs.withrelic.com/guides/platform-sync) for platform options and authentication.
 
@@ -131,21 +131,21 @@ relic service-account create --name "ci-deploy" --github myorg/myrepo --branch m
   run: npx relic run -e production -- npm run deploy
 ```
 
-| Variable | Description |
-|----------|-------------|
-| `RELIC_SERVICE_TOKEN` | Service account token (authentication and decryption) |
-| `RELIC_OIDC_TOKEN` | OIDC token; requested automatically in GitHub Actions, set via `id_tokens` in GitLab CI |
+| Variable              | Description                                                                             |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `RELIC_SERVICE_TOKEN` | Service account token (authentication and decryption)                                   |
+| `RELIC_OIDC_TOKEN`    | OIDC token; requested automatically in GitHub Actions, set via `id_tokens` in GitLab CI |
 
 `RELIC_API_KEY` + `RELIC_PASSWORD` still work but are deprecated because they put your master password in CI.
 
 ## Supported Platforms
 
-| Platform | Architecture |
-|----------|-------------|
-| macOS | ARM64 (Apple Silicon) |
-| macOS | x64 (Intel) |
-| Linux | x64 |
-| Windows | x64 |
+| Platform | Architecture          |
+| -------- | --------------------- |
+| macOS    | ARM64 (Apple Silicon) |
+| macOS    | x64 (Intel)           |
+| Linux    | x64                   |
+| Windows  | x64                   |
 
 ## Links
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Refresh extension description, README, and Marketplace keywords for end-to-end encrypted secrets and AI coding workflows.
+
 ## 0.1.1
 
 - Release the extension for installation from the VS Code Marketplace and Open VSX.

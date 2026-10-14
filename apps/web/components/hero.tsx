@@ -30,7 +30,9 @@ export function Hero() {
   return (
     <SectionWrapper label="Introduction">
       <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 sm:py-16 md:py-20 lg:px-12">
-        <p className="mb-4 font-mono text-xs text-foreground/60 sm:text-sm">{"Now open source"}</p>
+        <p className="mb-4 font-mono text-xs text-foreground/60 sm:text-sm">
+          {"Open source · Client-side encrypted · CLI, TUI & MCP"}
+        </p>
         <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-balance text-foreground sm:text-4xl md:text-5xl lg:text-6xl">
           {SITE_SLOGAN}
         </h1>

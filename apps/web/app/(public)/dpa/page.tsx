@@ -8,7 +8,7 @@ import { SITE_NAME, SITE_TWITTER_HANDLE } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Data Processing Agreement",
   description:
-    "Data Processing Agreement (DPA) for Relic, a zero-knowledge secrets management platform by Cupola Labs, LLC.",
+    "Data Processing Agreement (DPA) for Relic, an end-to-end encrypted secrets management platform by Cupola Labs, LLC.",
   alternates: {
     canonical: "/dpa",
   },
@@ -19,13 +19,13 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: "Data Processing Agreement - Relic",
     description:
-      "Data Processing Agreement (DPA) for Relic, a zero-knowledge secrets management platform by Cupola Labs, LLC.",
+      "Data Processing Agreement (DPA) for Relic, an end-to-end encrypted secrets management platform by Cupola Labs, LLC.",
   },
   twitter: {
     card: "summary",
     title: "Data Processing Agreement - Relic",
     description:
-      "Data Processing Agreement (DPA) for Relic, a zero-knowledge secrets management platform by Cupola Labs, LLC.",
+      "Data Processing Agreement (DPA) for Relic, an end-to-end encrypted secrets management platform by Cupola Labs, LLC.",
     creator: SITE_TWITTER_HANDLE,
     site: SITE_TWITTER_HANDLE,
   },
@@ -68,22 +68,22 @@ export default function DpaPage() {
               <h2 className="text-lg font-semibold">1. Definitions</h2>
               <ul className="mt-4 space-y-2 text-sm text-foreground/70 list-disc pl-5 leading-relaxed">
                 <li>
-                  <span className="font-medium text-foreground">Personal Data</span> — any
+                  <span className="font-medium text-foreground">Personal Data:</span> any
                   information relating to an identified or identifiable natural person, as defined
                   under applicable Data Protection Laws
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Processing</span> — any operation
+                  <span className="font-medium text-foreground">Processing:</span> any operation
                   performed on Personal Data, including collection, storage, use, disclosure, and
                   deletion
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Data Protection Laws</span> — all
+                  <span className="font-medium text-foreground">Data Protection Laws:</span> all
                   applicable laws relating to the processing of Personal Data, including GDPR, UK
                   GDPR, and CCPA
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Sub-processor</span> — any third
+                  <span className="font-medium text-foreground">Sub-processor:</span> any third
                   party engaged by us to process Personal Data on your behalf
                 </li>
               </ul>
@@ -99,7 +99,7 @@ export default function DpaPage() {
                 <li>Account authentication and session management</li>
                 <li>
                   Storage and transmission of encrypted data (secret values are encrypted
-                  client-side using AES-256-GCM before reaching our servers — we cannot access or
+                  client-side using AES-256-GCM before reaching our servers, so we cannot access or
                   decrypt them)
                 </li>
                 <li>Subscription and billing management</li>
@@ -236,8 +236,8 @@ export default function DpaPage() {
               </p>
               <ul className="mt-4 space-y-2 text-sm text-foreground/70 list-disc pl-5 leading-relaxed">
                 <li>
-                  Zero-knowledge architecture — secret values are encrypted on-device using
-                  AES-256-GCM with keys derived via Argon2id before transmission
+                  End-to-end encrypted (zero-knowledge) architecture: secret values are encrypted
+                  on-device using AES-256-GCM with keys derived via Argon2id before transmission
                 </li>
                 <li>Encryption keys never leave the user&apos;s device</li>
                 <li>TLS encryption for all data in transit</li>
@@ -268,15 +268,15 @@ export default function DpaPage() {
               </p>
               <ul className="mt-4 space-y-2 text-sm text-foreground/70 list-disc pl-5 leading-relaxed">
                 <li>
-                  <span className="font-medium text-foreground">Access and portability</span> —
+                  <span className="font-medium text-foreground">Access and portability:</span>{" "}
                   Export data via the CLI, TUI, or web dashboard
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Erasure</span> — Delete account and
+                  <span className="font-medium text-foreground">Erasure:</span> Delete account and
                   all associated data from the dashboard
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Objection to analytics</span> —
+                  <span className="font-medium text-foreground">Objection to analytics:</span>{" "}
                   Reject cookies via the consent banner (EU/EEA) or disable CLI/TUI telemetry
                 </li>
               </ul>

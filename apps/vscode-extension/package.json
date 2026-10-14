@@ -1,18 +1,23 @@
 {
   "name": "relic-vscode",
   "displayName": "Relic",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
-  "description": "Run, debug, and test your code with Relic secrets injected. No .env files.",
+  "description": "Manage, run, debug, and test your code with end-to-end encrypted Relic secrets injected. No plaintext .env files needed on disk.",
   "categories": [
     "Debuggers",
     "Linters",
     "Other"
   ],
   "keywords": [
+    "ai",
+    "claude-code",
+    "cursor",
     "dotenv",
+    "end-to-end encryption",
     "env",
     "environment variables",
+    "mcp",
     "relic",
     "secrets",
     "zero-knowledge"

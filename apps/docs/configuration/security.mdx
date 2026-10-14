@@ -1,9 +1,9 @@
 ---
 title: Security & Encryption
-description: How Relic encrypts secrets, manages keys, and keeps your data safe.
+description: How Relic encrypts secrets on your device, manages keys, and keeps your data safe.
 ---
 
-Relic is built on a zero-knowledge architecture. All encryption and decryption happens on your device. The server only stores encrypted data and can never read your secrets.
+Relic is built on an end-to-end encrypted (zero-knowledge) architecture. All encryption and decryption happens on your device. The server only stores encrypted data and can never read your secrets.
 
 ## Master Password
 
@@ -287,8 +287,8 @@ The raw service token never reaches the server. Only a SHA-256 hash is stored fo
 
 Service accounts can optionally require OIDC identity verification. When configured, requests must include both:
 
-1. **Service token** — for authentication (hash check) and decryption (key derivation)
-2. **OIDC token** — for CI platform identity verification (JWT signature + claims validation)
+1. **Service token**: for authentication (hash check) and decryption (key derivation)
+2. **OIDC token**: for CI platform identity verification (JWT signature + claims validation)
 
 Neither credential is sufficient alone. The service token provides E2E decryption capability, while the OIDC token proves the request originates from a trusted CI environment (e.g., GitHub Actions for a specific repository and branch).
 

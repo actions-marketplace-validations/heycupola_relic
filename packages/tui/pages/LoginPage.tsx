@@ -157,7 +157,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           </box>
 
           <box height={1} marginBottom={0} justifyContent="center" alignItems="center">
-            <text fg={THEME_COLORS.textMuted}>The secrets layer</text>
+            <text fg={THEME_COLORS.textMuted}>End-to-end encrypted secrets</text>
           </box>
 
           <box flexDirection="column" width={52} marginTop={1} gap={0}>

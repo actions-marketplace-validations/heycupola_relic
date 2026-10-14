@@ -12,7 +12,7 @@ OIDC trust policies add identity verification to service accounts. When configur
 3. At runtime, the CLI sends the CI job's OIDC token (requested automatically in GitHub Actions; read from `RELIC_OIDC_TOKEN` elsewhere)
 4. The server validates both the service token AND the OIDC token before returning secrets
 
-Neither credential is sufficient alone — the service token handles decryption, the OIDC token proves identity.
+Neither credential is sufficient alone: the service token handles decryption, and the OIDC token proves identity.
 
 ## Setup
 
@@ -119,7 +119,7 @@ Subject patterns control which CI identities can use the service account.
 
 | Pattern                             | Matches                            |
 | ----------------------------------- | ---------------------------------- |
-| `repo:org/repo:ref:refs/heads/main` | Exact match — only main branch     |
+| `repo:org/repo:ref:refs/heads/main` | Exact match (only main branch)     |
 | `repo:org/repo:*`                   | Any branch or event in the repo    |
 | `repo:org/*:ref:refs/heads/main`    | Main branch of any repo in the org |
 
@@ -144,7 +144,7 @@ Only GitHub Actions is detected automatically:
 
 - **Service token alone**: authenticates + decrypts (works without OIDC)
 - **Service token + OIDC**: authenticates via both, decrypts with token. If OIDC is configured, both are required.
-- **OIDC token alone**: not sufficient — the token is for identity only, not decryption
+- **OIDC token alone**: not sufficient, since the token is for identity only, not decryption
 
 This preserves Relic's end-to-end encryption while adding CI identity verification. The server never sees your secrets in plaintext.
 

@@ -104,7 +104,7 @@ jobs:
               "",
               "# This formula is maintained via the heycupola/relic release workflow.",
               "class Relic < Formula",
-              '  desc "End-to-end encrypted secret layer for developers"',
+              '  desc "End-to-end encrypted secrets for developers and AI agents"',
               '  homepage "https://withrelic.com"',
               f'  version "{os.environ["VERSION"]}"',
               '  license "MIT"',

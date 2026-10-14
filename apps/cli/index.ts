@@ -32,7 +32,7 @@ await initLogger();
 if (isFirstRun()) {
   console.error();
   console.error(`  ${pc.bold("relic")} ${pc.dim(`v${pkg.version}`)}`);
-  console.error(`  ${pc.dim("Zero-knowledge secret layer for your projects")}`);
+  console.error(`  ${pc.dim("End-to-end encrypted secrets for your projects")}`);
   console.error();
   console.error(`  ${pc.green("✓")} ${pc.dim("Ready to use")}`);
   console.error();
@@ -88,7 +88,7 @@ function formatCustomHelp(): string {
 
   lines.push("");
   lines.push(`  ${pc.bold("relic")} ${pc.dim(`v${pkg.version}`)}`);
-  lines.push(`  ${pc.dim("Zero-knowledge secret layer for your projects")}`);
+  lines.push(`  ${pc.dim("End-to-end encrypted secrets for your projects")}`);
   lines.push("");
   lines.push(`  ${pc.white("Usage")}  ${pc.dim("$")} relic ${pc.dim("<command> [options]")}`);
   lines.push("");
@@ -150,7 +150,7 @@ async function loadTui() {
 
 const program = new Command()
   .name("relic")
-  .description("Zero-knowledge secret layer for your projects")
+  .description("End-to-end encrypted secrets for your projects")
   .version(pkg.version)
   .enablePositionalOptions()
   .exitOverride()

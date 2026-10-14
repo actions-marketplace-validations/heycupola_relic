@@ -35,20 +35,26 @@ export interface PlanFeature {
 export const PRO_FEATURES: readonly PlanFeature[] = [
   {
     id: "sharing",
-    highlight: "Collaborate on projects",
+    highlight: "Encrypted team sharing",
     rest: `, ${PRO_COLLABORATORS_PER_PROJECT} collaborators per project included`,
   },
-  { id: "projects", highlight: `${PRO_PROJECTS} projects`, rest: " included" },
-  { id: "service-accounts", highlight: "Service accounts & OIDC", rest: " for CI/CD" },
-  { id: "api-keys", highlight: "API keys", rest: " for programmatic access" },
-  { id: "early-access", highlight: "Early access", rest: " to new features" },
+  {
+    id: "projects",
+    highlight: `${PRO_PROJECTS} projects`,
+    rest: " included (up to 50 history versions/secret)",
+  },
+  { id: "service-accounts", highlight: "Service accounts & OIDC", rest: " for passwordless CI/CD" },
+  { id: "api-keys", highlight: "API keys", rest: " for programmatic & pipeline access" },
+  { id: "early-access", highlight: "Key rotation & revocation", rest: " with full audit logs" },
 ];
 
 export const FREE_FEATURES = [
-  `${FREE_PROJECTS} project`,
-  "Activity logs & analytics",
-  "Fully encrypted",
-  "CLI & TUI access",
+  `${FREE_PROJECTS} project with environments & folders`,
+  "End-to-end encrypted on your device",
+  "CLI, TUI & VS Code / Cursor extension",
+  "MCP server for Cursor, Claude Code & Codex",
+  "Platform sync (Vercel, Cloudflare, GitHub, Fly & more)",
+  "Leak guard pre-commit hooks & secret checks",
 ] as const;
 
 export const FREE_EXCLUSIONS = ["No project sharing", "No CI/CD integration"] as const;

@@ -8,7 +8,7 @@ import { SITE_NAME, SITE_TWITTER_HANDLE } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Privacy Policy for Relic, a zero-knowledge secrets management platform by Cupola Labs, LLC.",
+    "Privacy Policy for Relic, an end-to-end encrypted secrets management platform by Cupola Labs, LLC.",
   alternates: {
     canonical: "/privacy-policy",
   },
@@ -19,13 +19,13 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: "Privacy Policy - Relic",
     description:
-      "Privacy Policy for Relic, a zero-knowledge secrets management platform by Cupola Labs, LLC.",
+      "Privacy Policy for Relic, an end-to-end encrypted secrets management platform by Cupola Labs, LLC.",
   },
   twitter: {
     card: "summary",
     title: "Privacy Policy - Relic",
     description:
-      "Privacy Policy for Relic, a zero-knowledge secrets management platform by Cupola Labs, LLC.",
+      "Privacy Policy for Relic, an end-to-end encrypted secrets management platform by Cupola Labs, LLC.",
     creator: SITE_TWITTER_HANDLE,
     site: SITE_TWITTER_HANDLE,
   },
@@ -52,11 +52,11 @@ export default function PrivacyPolicyPage() {
           <div className="divide-y divide-border">
             <section className="py-8 sm:py-10">
               <p className="text-sm text-foreground/70 leading-relaxed">
-                Relic is a zero-knowledge secrets management platform operated by Cupola Labs, LLC.
-                Our architecture is built so that your secrets are encrypted on your device before
-                they ever reach our servers. We cannot access, read, or decrypt your secret values.
-                This Privacy Policy explains what information we collect, how we use it, and your
-                rights regarding your data.
+                Relic is an end-to-end encrypted, zero-knowledge secrets management platform
+                operated by Cupola Labs, LLC. Our architecture is built so that your secrets are
+                encrypted on your device before they ever reach our servers. We cannot access, read,
+                or decrypt your secret values. This Privacy Policy explains what information we
+                collect, how we use it, and your rights regarding your data.
               </p>
             </section>
 
@@ -123,23 +123,23 @@ export default function PrivacyPolicyPage() {
               </p>
               <ul className="mt-4 space-y-2 text-sm text-foreground/70 list-disc pl-5 leading-relaxed">
                 <li>
-                  <span className="font-medium text-foreground">Contract performance</span> —
-                  Account information, encrypted data storage, and service operation are necessary
-                  to provide you with the Service
+                  <span className="font-medium text-foreground">Contract performance:</span> Account
+                  information, encrypted data storage, and service operation are necessary to
+                  provide you with the Service
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Consent</span> — Analytics cookies
+                  <span className="font-medium text-foreground">Consent:</span> Analytics cookies
                   (PostHog) are only set for EU/EEA users after explicit consent via our cookie
                   banner
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Legitimate interest</span> —
-                  Security audit logs and fraud prevention, service improvement based on anonymized
-                  CLI/TUI telemetry (which can be opted out of via{" "}
+                  <span className="font-medium text-foreground">Legitimate interest:</span> Security
+                  audit logs and fraud prevention, service improvement based on anonymized CLI/TUI
+                  telemetry (which can be opted out of via{" "}
                   <code className="text-foreground/90">relic telemetry disable</code>)
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Legal obligation</span> — Retaining
+                  <span className="font-medium text-foreground">Legal obligation:</span> Retaining
                   billing records as required by applicable tax and financial regulations
                 </li>
               </ul>
@@ -153,32 +153,32 @@ export default function PrivacyPolicyPage() {
               </p>
               <ul className="mt-4 space-y-2 text-sm text-foreground/70 list-disc pl-5 leading-relaxed">
                 <li>
-                  <span className="font-medium text-foreground">Convex</span> — Backend
+                  <span className="font-medium text-foreground">Convex:</span> Backend
                   infrastructure and encrypted data storage (United States)
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Google OAuth</span> — Account
+                  <span className="font-medium text-foreground">Google OAuth:</span> Account
                   authentication
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">GitHub OAuth</span> — Account
+                  <span className="font-medium text-foreground">GitHub OAuth:</span> Account
                   authentication
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">PostHog</span> — Anonymized product
+                  <span className="font-medium text-foreground">PostHog:</span> Anonymized product
                   analytics
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Autumn / Stripe</span> — Payment
+                  <span className="font-medium text-foreground">Autumn / Stripe:</span> Payment
                   processing and subscription management
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Resend</span> — Transactional email
+                  <span className="font-medium text-foreground">Resend:</span> Transactional email
                   delivery
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Cloudflare</span> — CDN, DNS, and
-                  web application hosting (Global)
+                  <span className="font-medium text-foreground">Cloudflare:</span> CDN, DNS, and web
+                  application hosting (Global)
                 </li>
               </ul>
               <p className="mt-4 text-sm text-foreground/70 leading-relaxed">
@@ -239,33 +239,33 @@ export default function PrivacyPolicyPage() {
               </p>
               <ul className="mt-4 space-y-2 text-sm text-foreground/70 list-disc pl-5 leading-relaxed">
                 <li>
-                  <span className="font-medium text-foreground">Right to rectification</span> —
+                  <span className="font-medium text-foreground">Right to rectification:</span>{" "}
                   Request correction of inaccurate personal data
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Right to erasure</span> — Request
+                  <span className="font-medium text-foreground">Right to erasure:</span> Request
                   deletion of your personal data (available via the dashboard or by contacting us)
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Right to data portability</span> —
+                  <span className="font-medium text-foreground">Right to data portability:</span>{" "}
                   Receive your data in a structured, machine-readable format (available via the CLI
                   export feature)
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Right to restrict processing</span>{" "}
-                  — Request that we limit the processing of your personal data
+                  <span className="font-medium text-foreground">Right to restrict processing:</span>{" "}
+                  Request that we limit the processing of your personal data
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Right to object</span> — Object to
+                  <span className="font-medium text-foreground">Right to object:</span> Object to
                   processing of your personal data based on legitimate interest
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Right to withdraw consent</span> —
+                  <span className="font-medium text-foreground">Right to withdraw consent:</span>{" "}
                   Withdraw consent for analytics cookies at any time by clearing your browser
                   storage or rejecting cookies when prompted
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Right to lodge a complaint</span> —
+                  <span className="font-medium text-foreground">Right to lodge a complaint:</span>{" "}
                   File a complaint with your local data protection authority
                 </li>
               </ul>
@@ -306,7 +306,7 @@ export default function PrivacyPolicyPage() {
                 </li>
                 <li>
                   A minimal anonymous record of account deletion is retained for legal purposes
-                  (deletion date, plan status, deletion counts — no personal information)
+                  (deletion date, plan status, deletion counts, with no personal information)
                 </li>
                 <li>
                   Billing records held by Stripe are subject to Stripe&apos;s own retention policies
@@ -322,12 +322,12 @@ export default function PrivacyPolicyPage() {
               </p>
               <ul className="mt-4 space-y-2 text-sm text-foreground/70 list-disc pl-5 leading-relaxed">
                 <li>
-                  <span className="font-medium text-foreground">Essential cookies</span> —
+                  <span className="font-medium text-foreground">Essential cookies:</span>{" "}
                   Authentication, session management, and geo-detection for consent compliance.
                   These are strictly necessary and do not require consent.
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Analytics cookies</span> — PostHog
+                  <span className="font-medium text-foreground">Analytics cookies:</span> PostHog
                   product analytics. For EU/EEA users, these are only set after explicit consent via
                   our cookie banner. For users outside the EU/EEA, these are set by default.
                 </li>
@@ -345,22 +345,22 @@ export default function PrivacyPolicyPage() {
               </p>
               <ul className="mt-4 space-y-2 text-sm text-foreground/70 list-disc pl-5 leading-relaxed">
                 <li>
-                  <span className="font-medium text-foreground">Right to know</span> — You may
+                  <span className="font-medium text-foreground">Right to know:</span> You may
                   request details about the categories and specific pieces of personal information
                   we have collected about you
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Right to delete</span> — You may
+                  <span className="font-medium text-foreground">Right to delete:</span> You may
                   request deletion of your personal information (available via the dashboard or by
                   contacting us)
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Right to opt-out of sale</span> — We
+                  <span className="font-medium text-foreground">Right to opt-out of sale:</span> We
                   do not sell your personal information to third parties. We never have and never
                   will.
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Right to non-discrimination</span> —
+                  <span className="font-medium text-foreground">Right to non-discrimination:</span>{" "}
                   We will not discriminate against you for exercising any of your CCPA rights
                 </li>
               </ul>

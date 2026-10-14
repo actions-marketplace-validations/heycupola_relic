@@ -18,50 +18,52 @@ interface CompactFeature {
 
 const videoFeatures: VideoFeature[] = [
   {
-    title: "Built-in secret editor",
+    title: "Built-in .env & secret editor",
     badge: "Free",
-    description: "Paste your .env file or edit secrets directly in the TUI. No context switching.",
+    description:
+      "Paste your .env file, import from Doppler, Infisical, or 1Password, and edit secrets directly in the TUI. Encrypted on your device before upload.",
     videoSrc: "/videos/editor-demo.mp4",
   },
   {
-    title: "Collaboration",
+    title: "Encrypted team sharing",
     badge: "Pro",
     description:
-      "Share projects with your team via email. Each person gets their own encryption keys.",
+      "Stop sending .env files over Slack. Share projects with teammates by email, wrapped with each person's own encryption keys and instant revocation.",
     videoSrc: "/videos/collaboration-demo.mp4",
   },
   {
-    title: "Run anywhere",
+    title: "CI/CD & OIDC pipelines",
     badge: "Pro",
     description:
-      "Inject secrets into any pipeline with service accounts or OIDC trust. Works in GitHub Actions, GitLab CI, and more.",
+      "Inject secrets into GitHub Actions, GitLab CI, or any pipeline using service accounts and passwordless OIDC trust policies.",
     videoSrc: "/videos/cicd-demo.mp4",
   },
 ];
 
 const compactFeatures: CompactFeature[] = [
   {
-    keyword: "run",
-    title: "Language agnostic",
-    description: "Any language, any framework. Secrets are injected as environment variables.",
+    keyword: "relic mcp",
+    title: "AI-safe MCP server",
+    description:
+      "Let Cursor, Claude Code, Codex, and Zed run commands with secrets injected while values stay hidden and redacted from AI context.",
   },
   {
-    keyword: "init",
-    title: "Quick setup",
+    keyword: "relic push",
+    title: "Direct platform sync",
     description:
-      "Run relic init to connect your project, then relic run to inject your secrets. Ready in seconds.",
+      "Decrypt locally and push straight to Vercel, Cloudflare, GitHub Actions, Fly.io, and more with diff plans (+, ~, -).",
   },
   {
-    keyword: "organize",
-    title: "Projects, envs, folders",
+    keyword: "relic run",
+    title: "Runtime memory injection",
     description:
-      "A clean hierarchy to keep your secrets structured, from project level down to individual folders.",
+      "Inject environment variables into any process or subshell via a native Rust runner, with no plaintext .env files needed on disk.",
   },
   {
-    keyword: "encrypt",
-    title: "Encrypted by default",
+    keyword: "relic guard",
+    title: "Leak guard & checks",
     description:
-      "AES-256 + Argon2id. Your secrets are encrypted before they ever leave your machine.",
+      "Block accidental secret or .env commits with pre-commit hooks, and catch missing keys in your code or IDE before deploy.",
   },
 ];
 
@@ -257,7 +259,8 @@ export function Features() {
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16 lg:px-12">
         <h2 className="text-xl font-semibold text-foreground sm:text-2xl">Features</h2>
         <p className="mt-2 max-w-2xl text-sm text-foreground/60 text-pretty sm:text-base">
-          Everything you need to manage secrets, from editing to sharing to deployment.
+          Everything you need to manage .env secrets across local development, AI coding agents,
+          team sharing, and production deploys.
         </p>
 
         <div className="mt-6 space-y-3 sm:mt-8 sm:space-y-4">

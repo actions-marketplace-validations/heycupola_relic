@@ -7,8 +7,8 @@
 </p>
 
 <p align="center">
-  End-to-end encrypted secret layer for developers.<br>
-  Secrets are encrypted on-device before reaching the server.
+  End-to-end encrypted secrets for developers and AI agents.<br>
+  Manage, share, and inject environment variables, encrypted on your device and never exposed to servers or AI prompts.
 </p>
 
 <p align="center">
@@ -25,12 +25,14 @@
 
 ### What is Relic?
 
-Relic is a CLI-first secret layer built for developers and teams.
+Relic is a CLI-first, end-to-end encrypted secret manager built for developers, teams, and AI coding workflows.
 
-- Secrets are encrypted on the client before leaving the device. The server stores only ciphertext.
-- A Rust-based runner injects secrets at runtime without writing to disk.
-- Share projects with teammates. Each person's secrets are encrypted with their own keys.
-- Works in CI/CD. Use API keys to pull secrets in GitHub Actions, GitLab CI, or any pipeline.
+- **Encrypted on your device:** Secrets are encrypted client-side with AES-256-GCM and Argon2id before leaving your machine. Our servers store only ciphertext.
+- **Familiar `.env` workflow, zero plaintext on disk:** Paste `.env` files directly into the TUI editor or import from Doppler, Infisical, Vercel, and 1Password. At runtime, a memory-safe Rust runner injects variables into your process and wipes memory on exit.
+- **AI-safe MCP server (`relic mcp`):** Let Cursor, Claude Code, Codex, and Zed inspect secret names and run commands with secrets injected while values are automatically redacted from output.
+- **Direct platform sync (`relic push`):** Decrypt locally and sync straight to Vercel, Cloudflare Workers, GitHub Actions, Fly.io, and more with diff plans (`+`, `~`, `-`).
+- **Shift-left protection (`relic guard` & `relic check`):** Block accidental `.env` or secret leaks in pre-commit hooks, and validate missing keys in your IDE or CI.
+- **Encrypted team sharing & OIDC CI/CD:** Share projects using per-collaborator public keys, and run pipelines with passwordless OIDC service accounts.
 
 ### Install
 
@@ -41,22 +43,38 @@ npm install -g relic
 bun add -g relic
 ```
 
-Or download a prebuilt binary from the [releases page](https://github.com/heycupola/relic/releases).
+Or on Windows (PowerShell):
+
+```powershell
+irm https://withrelic.com/install.ps1 | iex
+```
+
+Prebuilt binaries are also available on the [releases page](https://github.com/heycupola/relic/releases).
 
 ### Quick Start
 
 ```bash
 relic login                                    # Authenticate via browser
-relic init                                     # Initialize your project
-relic                                          # Open the TUI and start managing secrets
-relic run -e production -- npm run deploy      # Run with secrets injected
+relic init                                     # Link your project (creates relic.toml)
+relic import -e development                    # Import from .env, Doppler, Infisical, or 1Password
+relic                                          # Open the TUI to edit and organize secrets
+relic run -e production -- npm run deploy      # Run any command with secrets injected
+relic push -e production --target vercel       # Sync directly to Vercel, Cloudflare, GitHub, or Fly
+```
+
+### Use with AI Agents (MCP)
+
+Add Relic to Cursor, Claude Code, Codex, or Zed so your AI assistant can run tests and scripts without reading a `.env` file:
+
+```bash
+claude mcp add relic -- relic mcp
 ```
 
 ### How It Works
 
-Relic encrypts and decrypts secrets on the client using AES-256 and Argon2id. The server only stores encrypted data.
+Relic encrypts and decrypts secrets on your device using AES-256-GCM, RSA-OAEP-2048, and Argon2id. The server only stores ciphertext.
 
-When you run `relic run`, the CLI fetches encrypted secrets, decrypts them locally, and injects them into the target process through a Rust runner that clears memory after use. No secrets are written to disk.
+When you run `relic run` or `relic shell`, the CLI fetches encrypted secrets, decrypts them locally, and injects them into the target process through a native Rust runner that zeroes memory after use. No secrets are ever written to disk.
 
 Learn more in the [documentation](https://docs.withrelic.com).
 

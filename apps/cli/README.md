@@ -1,6 +1,6 @@
 # Relic CLI
 
-Zero-knowledge secret layer CLI. Fetches encrypted secrets from the server, decrypts them locally, and injects them into the process environment.
+End-to-end encrypted secrets CLI for developers and AI agents. Fetches encrypted secrets from the server, decrypts them locally on your device, and injects them into processes without writing `.env` files to disk.
 
 ## Installation
 
