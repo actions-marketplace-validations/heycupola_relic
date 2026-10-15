@@ -1,0 +1,177 @@
+name: "Setup Relic"
+description: "Install the Relic CLI for end-to-end encrypted secrets, runtime injection, leak scanning, and platform sync."
+author: "Cupola"
+
+branding:
+  icon: "lock"
+  color: "purple"
+
+inputs:
+  version:
+    description: "Relic version to install (e.g. 'latest', '0.10.2', or 'v0.10.2'). Defaults to 'latest'."
+    required: false
+    default: "latest"
+  service-token:
+    description: "Optional RELIC_SERVICE_TOKEN to export for subsequent steps in the job."
+    required: false
+  github-token:
+    description: "GitHub token used when resolving the latest release tag to avoid API rate limits."
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  version:
+    description: "The installed Relic version tag (e.g. v0.10.2)."
+    value: ${{ steps.install.outputs.version }}
+  bin-path:
+    description: "Directory containing the installed relic binary."
+    value: ${{ steps.install.outputs.bin-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Relic (Unix)
+      id: install-unix
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_SERVICE_TOKEN: ${{ inputs.service-token }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        set -euo pipefail
+
+        case "${RUNNER_OS}" in
+          Linux)  os="linux" ;;
+          macOS)  os="darwin" ;;
+          *)      echo "::error::Unsupported operating system: ${RUNNER_OS}" && exit 1 ;;
+        esac
+
+        case "${RUNNER_ARCH}" in
+          X64)   arch="x64" ;;
+          ARM64) arch="arm64" ;;
+          *)     echo "::error::Unsupported architecture: ${RUNNER_ARCH}" && exit 1 ;;
+        esac
+
+        if [ "${os}-${arch}" = "linux-arm64" ]; then
+          echo "::error::Prebuilt Linux binaries are currently available for x64 runners."
+          exit 1
+        fi
+
+        target="${os}-${arch}"
+        version="${INPUT_VERSION}"
+
+        if [ -z "${version}" ] || [ "${version}" = "latest" ]; then
+          auth_header=()
+          if [ -n "${GITHUB_TOKEN:-}" ]; then
+            auth_header=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+          fi
+          version="$(
+            curl -fsSL "${auth_header[@]}" "https://api.github.com/repos/heycupola/relic/releases/latest" \
+              | grep '"tag_name"' \
+              | head -1 \
+              | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/'
+          )"
+        elif [[ "${version}" != v* ]]; then
+          version="v${version}"
+        fi
+
+        if [ -z "${version}" ]; then
+          echo "::error::Could not determine Relic version to install."
+          exit 1
+        fi
+
+        bin_dir="${RUNNER_TEMP}/relic-${version}/bin"
+        mkdir -p "${bin_dir}"
+
+        archive="relic-${target}.tar.gz"
+        url="https://github.com/heycupola/relic/releases/download/${version}/${archive}"
+
+        tmp_dir="$(mktemp -d)"
+        trap 'rm -rf "${tmp_dir}"' EXIT
+
+        echo "Downloading Relic ${version} (${target})..."
+        curl -fsSL "${url}" -o "${tmp_dir}/${archive}"
+        tar -xzf "${tmp_dir}/${archive}" -C "${bin_dir}"
+        chmod +x "${bin_dir}/relic"
+
+        echo "${bin_dir}" >> "${GITHUB_PATH}"
+        echo "version=${version}" >> "${GITHUB_OUTPUT}"
+        echo "bin-path=${bin_dir}" >> "${GITHUB_OUTPUT}"
+
+        if [ -n "${INPUT_SERVICE_TOKEN}" ]; then
+          echo "::add-mask::${INPUT_SERVICE_TOKEN}"
+          echo "RELIC_SERVICE_TOKEN=${INPUT_SERVICE_TOKEN}" >> "${GITHUB_ENV}"
+        fi
+
+        "${bin_dir}/relic" --version
+
+    - name: Install Relic (Windows)
+      id: install-windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_SERVICE_TOKEN: ${{ inputs.service-token }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        $ErrorActionPreference = "Stop"
+        $ProgressPreference = "SilentlyContinue"
+
+        $target = "win32-x64"
+        $version = $env:INPUT_VERSION
+
+        if ([string]::IsNullOrWhiteSpace($version) -or $version -eq "latest") {
+          $headers = @{ "User-Agent" = "setup-relic-action" }
+          if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_TOKEN)) {
+            $headers["Authorization"] = "Bearer $($env:GITHUB_TOKEN)"
+          }
+          $release = Invoke-RestMethod -Uri "https://api.github.com/repos/heycupola/relic/releases/latest" -Headers $headers
+          $version = $release.tag_name
+        } elseif (-not $version.StartsWith("v")) {
+          $version = "v$version"
+        }
+
+        if ([string]::IsNullOrWhiteSpace($version)) {
+          throw "Could not determine Relic version to install."
+        }
+
+        $binDir = Join-Path $env:RUNNER_TEMP "relic-$version\bin"
+        New-Item -ItemType Directory -Force -Path $binDir | Out-Null
+
+        $archive = "relic-$target.zip"
+        $url = "https://github.com/heycupola/relic/releases/download/$version/$archive"
+        $tmpDir = Join-Path $env:RUNNER_TEMP ("relic-dl-" + [Guid]::NewGuid().ToString("N"))
+        New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
+
+        try {
+          Write-Host "Downloading Relic $version ($target)..."
+          $archivePath = Join-Path $tmpDir $archive
+          Invoke-WebRequest -Uri $url -OutFile $archivePath -UseBasicParsing
+          Expand-Archive -Path $archivePath -DestinationPath $binDir -Force
+        } finally {
+          Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
+        }
+
+        Add-Content -Path $env:GITHUB_PATH -Value $binDir
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$version"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "bin-path=$binDir"
+
+        if (-not [string]::IsNullOrWhiteSpace($env:INPUT_SERVICE_TOKEN)) {
+          Write-Host "::add-mask::$($env:INPUT_SERVICE_TOKEN)"
+          Add-Content -Path $env:GITHUB_ENV -Value "RELIC_SERVICE_TOKEN=$($env:INPUT_SERVICE_TOKEN)"
+        }
+
+        & (Join-Path $binDir "relic.exe") --version
+
+    - name: Set outputs
+      id: install
+      shell: bash
+      run: |
+        if [ "${RUNNER_OS}" = "Windows" ]; then
+          echo "version=${{ steps.install-windows.outputs.version }}" >> "${GITHUB_OUTPUT}"
+          echo "bin-path=${{ steps.install-windows.outputs.bin-path }}" >> "${GITHUB_OUTPUT}"
+        else
+          echo "version=${{ steps.install-unix.outputs.version }}" >> "${GITHUB_OUTPUT}"
+          echo "bin-path=${{ steps.install-unix.outputs.bin-path }}" >> "${GITHUB_OUTPUT}"
+        fi

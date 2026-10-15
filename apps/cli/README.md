@@ -234,9 +234,13 @@ permissions:
   contents: read
 
 steps:
+  - uses: actions/checkout@v4
+
+  - uses: heycupola/relic@main
+    with:
+      service-token: ${{ secrets.RELIC_SERVICE_TOKEN }}
+
   - name: Deploy with secrets
-    env:
-      RELIC_SERVICE_TOKEN: ${{ secrets.RELIC_SERVICE_TOKEN }}
     run: relic run -e production -- npm run deploy
 ```
 
