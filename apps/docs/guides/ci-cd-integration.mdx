@@ -38,6 +38,8 @@ Service accounts provide passwordless CI/CD integration. See the [Service Accoun
 
 ## GitHub Actions
 
+Use the `heycupola/relic` GitHub Action to install the prebuilt Relic CLI binary in seconds (no Node.js or Bun setup required):
+
 ```yaml
 name: Deploy
 
@@ -55,21 +57,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install Relic
-        run: bun add -g relic
+      - name: Setup Relic
+        uses: heycupola/relic@main
+        with:
+          service-token: ${{ secrets.RELIC_SERVICE_TOKEN }}
 
       - name: Deploy with secrets
-        env:
-          RELIC_SERVICE_TOKEN: ${{ secrets.RELIC_SERVICE_TOKEN }}
         run: relic run -e production -- npm run deploy
 ```
 
 <Note>
   The `id-token: write` permission is required if you configured OIDC on your service account.
-  Without OIDC, it can be omitted.
+  Without OIDC, it can be omitted. You can also pin a specific CLI version with `version: "0.10.2"`
+  or pass `RELIC_SERVICE_TOKEN` directly on individual steps instead of `with: service-token`.
 </Note>
 
 ### Check for Missing Keys Before Deploying
