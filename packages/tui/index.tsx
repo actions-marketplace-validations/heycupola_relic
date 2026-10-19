@@ -45,6 +45,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { PasswordSetupPage } from "./pages/PasswordSetupPage";
 import { ProjectPage } from "./pages/ProjectPage";
 import { RouterProvider, useRouter } from "./router";
+import { disposeClipboard } from "./utils/clipboard";
 import { getUserDisplayName } from "./utils/mappers";
 
 const logger = createLogger("tui");
@@ -309,6 +310,8 @@ let crashError: unknown = null;
 
 const renderer = await createCliRenderer({
   exitOnCtrlC: true,
+  // NOTE: Mouse tracking would block the terminal's native drag-to-select and copy.
+  useMouse: false,
   openConsoleOnError: isDev,
   ...(isDev && {
     consoleOptions: {
@@ -320,7 +323,7 @@ const renderer = await createCliRenderer({
 
 // NOTE: The renderer destroys itself on Ctrl+C / SIGINT on the next tick; record why first.
 renderer.keyInput.on("keypress", (key) => {
-  if (key.ctrl && key.name === "c") exitCode = EXIT_CODE_INTERRUPTED;
+  if (key.ctrl && !key.shift && !key.meta && key.name === "c") exitCode = EXIT_CODE_INTERRUPTED;
 });
 process.on("SIGINT", () => {
   exitCode = EXIT_CODE_INTERRUPTED;
@@ -339,7 +342,7 @@ if (!isDev) {
 renderer.on("destroy", () =>
   setTimeout(() => {
     if (crashError) console.error("Relic crashed:", extractErrorMessage(crashError));
-    process.exit(exitCode);
+    void disposeClipboard().finally(() => process.exit(exitCode));
   }, 50),
 );
 createRoot(renderer).render(<App />);

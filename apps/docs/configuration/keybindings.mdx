@@ -59,13 +59,18 @@ Keybinding customization is not available yet. The shortcuts below are built int
 
 ## Secrets
 
-| Key  | Action                     |
-| ---- | -------------------------- |
-| `t`  | Open secret history        |
-| `r`  | Set secret rotation policy |
-| `d`  | Delete secret              |
-| `v`  | Toggle show / hide values  |
-| `⌥i` | Bulk import secrets        |
+| Key  | Action                                  |
+| ---- | --------------------------------------- |
+| `y`  | Copy value to the clipboard             |
+| `Y`  | Copy as `KEY=value`                     |
+| `t`  | Open secret history                     |
+| `r`  | Set secret rotation policy              |
+| `d`  | Delete secret                           |
+| `v`  | Toggle show / hide values               |
+| `⌥i` | Bulk import secrets                     |
+
+Copied values are cleared from the clipboard after 30 seconds, unless you copied something else in
+the meantime. Over SSH, copying uses OSC 52, so your terminal must allow clipboard access.
 
 ## Rotation Policy Input
 
@@ -87,11 +92,22 @@ Values are masked unless secret visibility is on (`v`). See [Secret History](/gu
 
 ## Bulk Import Editor
 
-| Key   | Action                     |
-| ----- | -------------------------- |
-| `⌥j`  | Toggle format (env / JSON) |
-| `⌥s`  | Save                       |
-| `Esc` | Cancel                     |
+| Key                            | Action                          |
+| ------------------------------ | ------------------------------- |
+| `Ctrl+T` / `⌥j`                | Toggle format (env / JSON)      |
+| `Ctrl+S` / `⌥s`                | Save                            |
+| `Shift` + arrows / `Home`/`End` | Select text                    |
+| `Ctrl+A`                       | Select all                      |
+| `⌥c` / `⌘c` / `Ctrl+Shift+C`   | Copy selection                  |
+| `Ctrl+X`                       | Cut selection                   |
+| `Ctrl+Z`                       | Undo                            |
+| `Ctrl+Y` / `Ctrl+Shift+Z`      | Redo                            |
+| `Home` / `End`                 | Start / end of line             |
+| `Tab`                          | Insert two spaces               |
+| `Esc`                          | Cancel                          |
+
+`Ctrl+C` still quits Relic. `⌘c` only reaches the editor in terminals that support the kitty
+keyboard protocol. To copy text from anywhere else in the TUI, select it with the mouse as usual.
 
 ## Collaborator Modal
 
