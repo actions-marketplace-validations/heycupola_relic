@@ -1,27 +1,27 @@
 /** @jsxImportSource @opentui/react */
+import { type KeyBinding, SyntaxStyle, type TextareaRenderable } from "@opentui/core";
 import { useTerminalDimensions } from "@opentui/react";
-import { useMemo } from "react";
+import { type RefObject, useEffect, useMemo } from "react";
 import { useTaskQueue } from "../../hooks/useTaskQueue";
-import type { CursorPosition } from "../../types/keyboard";
 import type {
   BulkImportSecret,
   CollisionAction,
   CollisionInfo,
   ValidationResult,
 } from "../../utils/bulkImport";
-import { parseEnvContent, validateBulkImportJson } from "../../utils/bulkImport";
 import { THEME_COLORS } from "../../utils/constants";
-import { highlightLine, mapCursorToWrappedLines, wrapLine } from "../../utils/ui";
+import { highlightContent } from "../../utils/ui";
 import { Modal } from "../shared/Modal";
 
 interface BulkImportModalProps {
   visible: boolean;
+  editorRef: RefObject<TextareaRenderable | null>;
+  initialContent: string;
   content: string;
-  cursor: CursorPosition;
   format: "env" | "json";
+  validation: ValidationResult;
   collisions: CollisionInfo[];
-  cursorVisible: boolean;
-  onClose: () => void;
+  onContentChange: () => void;
 }
 
 const MAX_EDITOR_ROWS = 18;
@@ -30,14 +30,49 @@ const MAX_EDITOR_COLUMNS = 76;
 /** Rows the modal needs around the editor: title, format row, status, info, guide bar, padding. */
 const MODAL_CHROME_HEIGHT = 15;
 
+/** Merged over OpenTUI's defaults; Ctrl+A selects all like a GUI editor, so Home goes to line start. */
+const EDITOR_KEY_BINDINGS: KeyBinding[] = [
+  { name: "z", ctrl: true, action: "undo" },
+  { name: "z", ctrl: true, shift: true, action: "redo" },
+  { name: "y", ctrl: true, action: "redo" },
+  { name: "a", ctrl: true, action: "select-all" },
+  { name: "home", action: "line-home" },
+  { name: "end", action: "line-end" },
+  { name: "home", shift: true, action: "select-line-home" },
+  { name: "end", shift: true, action: "select-line-end" },
+];
+
+function applyHighlights(
+  editor: TextareaRenderable,
+  style: SyntaxStyle,
+  content: string,
+  format: "env" | "json",
+) {
+  editor.clearAllHighlights();
+  highlightContent(content, format).forEach((parts, lineIdx) => {
+    const lineLength = content.split("\n")[lineIdx]?.length ?? 0;
+    let start = 0;
+    for (const part of parts) {
+      const end = Math.min(start + part.text.length, lineLength);
+      if (end > start) {
+        const styleId =
+          style.getStyleId(part.color) ?? style.registerStyle(part.color, { fg: part.color });
+        editor.addHighlight(lineIdx, { start, end, styleId });
+      }
+      start = end;
+    }
+  });
+}
+
 export function BulkImportModal({
   visible,
+  editorRef,
+  initialContent,
   content,
-  cursor,
   format,
+  validation,
   collisions,
-  cursorVisible,
-  onClose: _onClose,
+  onContentChange,
 }: BulkImportModalProps) {
   const { isRunning } = useTaskQueue();
   const { width: termWidth, height: termHeight } = useTerminalDimensions();
@@ -47,139 +82,27 @@ export function BulkImportModal({
   );
   const editorWidth = Math.max(30, Math.min(MAX_EDITOR_COLUMNS, termWidth - 8));
 
-  const validationResult = useMemo((): ValidationResult => {
-    const trimmed = content.trim();
-    if (trimmed === "") {
-      return { valid: false, secrets: [], errors: [], duplicateKeys: [] };
-    }
+  const syntaxStyle = useMemo(() => SyntaxStyle.create(), []);
+  useEffect(() => () => syntaxStyle.destroy(), [syntaxStyle]);
 
-    if (format === "env") {
-      const secrets = parseEnvContent(trimmed);
-      return validateBulkImportJson(secrets);
-    }
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (visible && editor) applyHighlights(editor, syntaxStyle, content, format);
+  }, [visible, content, format, editorRef, syntaxStyle]);
 
-    try {
-      const parsed = JSON.parse(trimmed);
-      return validateBulkImportJson(parsed);
-    } catch {
-      return {
-        valid: false,
-        secrets: [],
-        errors: [{ message: "Invalid JSON syntax" }],
-        duplicateKeys: [],
-      };
-    }
-  }, [content, format]);
-
-  const getShortcuts = () => {
-    return [
-      { key: "^s", description: "save", disabled: isRunning },
-      {
-        key: "^t",
-        description: format === "env" ? "switch to JSON" : "switch to .env",
-        disabled: isRunning,
-      },
-      { key: "esc", description: "cancel", disabled: isRunning },
-    ];
-  };
-
-  const lines = content.split("\n");
-  const visibleLines = editorHeight - 2;
-  const maxLineWidth = editorWidth - 8;
-
-  const { wrappedLine, wrappedColumn, allWrappedLines } = useMemo(
-    () => mapCursorToWrappedLines(lines, cursor, maxLineWidth),
-    [lines, cursor, maxLineWidth],
-  );
-
-  const scrollOffset = Math.max(0, wrappedLine - visibleLines + 1);
-
-  const renderEditorContent = () => {
-    if (content === "") {
-      return (
-        <text>
-          <span fg={THEME_COLORS.primary}> 1 │ </span>
-          {cursorVisible ? (
-            <span bg={THEME_COLORS.primary} fg={THEME_COLORS.header}>
-              {" "}
-            </span>
-          ) : (
-            <span fg={THEME_COLORS.textDim}>_</span>
-          )}
-        </text>
-      );
-    }
-
-    const visibleStart = scrollOffset;
-    const visibleEnd = scrollOffset + visibleLines;
-    const visibleWrappedLines = allWrappedLines.slice(visibleStart, visibleEnd);
-
-    const wrappedLineToOriginalLine: number[] = [];
-    const isFirstWrappedLine: boolean[] = [];
-    for (let i = 0; i < lines.length; i++) {
-      const wrapped = wrapLine(lines[i] || "", maxLineWidth);
-      for (let j = 0; j < wrapped.length; j++) {
-        wrappedLineToOriginalLine.push(i);
-        isFirstWrappedLine.push(j === 0);
-      }
-    }
-
-    return visibleWrappedLines.map((displayLine, i) => {
-      const wrappedLineIndex = visibleStart + i;
-      const isCursorLine = wrappedLineIndex === wrappedLine;
-      const originalLineNum = wrappedLineToOriginalLine[wrappedLineIndex] ?? 0;
-      const isFirstLine = isFirstWrappedLine[wrappedLineIndex] ?? true;
-      const lineNum = isFirstLine ? String(originalLineNum + 1).padStart(3, " ") : "   ";
-
-      if (!isCursorLine) {
-        const highlighted = highlightLine(displayLine || " ", format);
-        return (
-          <text key={wrappedLineIndex}>
-            <span fg={THEME_COLORS.textDim}>{lineNum} │ </span>
-            {highlighted.map((part, idx) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: idx is stable here
-              <span key={idx} fg={part.color}>
-                {part.text}
-              </span>
-            ))}
-          </text>
-        );
-      }
-
-      const beforeCursor = displayLine.slice(0, wrappedColumn);
-      const cursorChar = displayLine[wrappedColumn] || " ";
-      const afterCursor = displayLine.slice(wrappedColumn + 1);
-
-      const highlightedBefore = highlightLine(beforeCursor, format);
-      const highlightedAfter = highlightLine(afterCursor, format);
-
-      return (
-        <text key={wrappedLineIndex}>
-          <span fg={THEME_COLORS.primary}>{lineNum} │ </span>
-          {beforeCursor &&
-            highlightedBefore.map((part, idx) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: idx is stable here
-              <span key={`b${idx}`} fg={part.color}>
-                {part.text}
-              </span>
-            ))}
-          {cursorVisible ? (
-            <span bg={THEME_COLORS.primary} fg={THEME_COLORS.header}>
-              {cursorChar}
-            </span>
-          ) : (
-            <span fg={THEME_COLORS.text}>{cursorChar}</span>
-          )}
-          {highlightedAfter.map((part, idx) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: idx is stable here
-            <span key={`a${idx}`} fg={part.color}>
-              {part.text}
-            </span>
-          ))}
-        </text>
-      );
-    });
-  };
+  const shortcuts = [
+    { key: "^s", description: "save", disabled: isRunning },
+    {
+      key: "^t",
+      description: format === "env" ? "switch to JSON" : "switch to .env",
+      disabled: isRunning,
+    },
+    { key: "^z", description: "undo", disabled: isRunning },
+    { key: "⇧+arrows", description: "select", disabled: isRunning },
+    { key: "⌥c", description: "copy", disabled: isRunning },
+    { key: "^x", description: "cut", disabled: isRunning },
+    { key: "esc", description: "cancel", disabled: isRunning },
+  ];
 
   return (
     <Modal
@@ -187,7 +110,7 @@ export function BulkImportModal({
       title="Edit secrets"
       width={editorWidth + 4}
       height={editorHeight + MODAL_CHROME_HEIGHT - 2}
-      shortcuts={getShortcuts()}
+      shortcuts={shortcuts}
     >
       <box flexDirection="column" width={editorWidth}>
         <box flexDirection="row" justifyContent="space-between">
@@ -209,34 +132,46 @@ export function BulkImportModal({
           marginTop={1}
           paddingLeft={1}
           paddingTop={1}
-          flexDirection="column"
+          paddingBottom={1}
         >
-          {renderEditorContent()}
-          {(() => {
-            const wrappedLinesBelow = allWrappedLines.length - (scrollOffset + visibleLines);
-            if (wrappedLinesBelow > 0) {
-              return (
-                <text fg={THEME_COLORS.textMuted}>
-                  ... {wrappedLinesBelow} more line{wrappedLinesBelow > 1 ? "s" : ""} below
-                </text>
-              );
-            }
-            return null;
-          })()}
+          <line-number
+            fg={THEME_COLORS.textDim}
+            bg={THEME_COLORS.inputBg}
+            minWidth={3}
+            paddingRight={1}
+            flexGrow={1}
+          >
+            <textarea
+              ref={editorRef}
+              initialValue={initialContent}
+              focused={visible && !isRunning}
+              keyBindings={EDITOR_KEY_BINDINGS}
+              syntaxStyle={syntaxStyle}
+              onContentChange={onContentChange}
+              placeholder="Start typing or paste content..."
+              placeholderColor={THEME_COLORS.textMuted}
+              textColor={THEME_COLORS.text}
+              focusedTextColor={THEME_COLORS.text}
+              backgroundColor={THEME_COLORS.inputBg}
+              focusedBackgroundColor={THEME_COLORS.inputBg}
+              cursorColor={THEME_COLORS.primary}
+              selectionBg={THEME_COLORS.statusBarActive}
+              wrapMode="word"
+              flexGrow={1}
+            />
+          </line-number>
         </box>
         <box height={2} marginTop={1} flexDirection="column">
-          {validationResult.errors.length > 0 && (
+          {validation.errors.length > 0 && (
             <text>
               <span fg={THEME_COLORS.error}>✗ </span>
-              <span fg={THEME_COLORS.textMuted}>{validationResult.errors[0]?.message}</span>
+              <span fg={THEME_COLORS.textMuted}>{validation.errors[0]?.message}</span>
             </text>
           )}
-          {validationResult.valid && (
+          {validation.valid && (
             <text>
               <span fg={THEME_COLORS.success}>✓ </span>
-              <span fg={THEME_COLORS.textMuted}>
-                {validationResult.secrets.length} secrets ready
-              </span>
+              <span fg={THEME_COLORS.textMuted}>{validation.secrets.length} secrets ready</span>
               {collisions.length > 0 && (
                 <span fg={THEME_COLORS.warning}>
                   {" "}
@@ -246,7 +181,7 @@ export function BulkImportModal({
               )}
             </text>
           )}
-          {!validationResult.valid && validationResult.errors.length === 0 && (
+          {!validation.valid && validation.errors.length === 0 && (
             <text fg={THEME_COLORS.textMuted}>Start typing or paste content...</text>
           )}
         </box>

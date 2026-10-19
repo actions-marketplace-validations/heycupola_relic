@@ -27,6 +27,13 @@ import { useRouter } from "../router";
 import type { Shortcut } from "../types/keyboard";
 import type { ModalType, ProjectStatus, ViewLevel } from "../types/models";
 import { DASHBOARD_URL, STATUS_COLORS, STATUS_ICONS, THEME_COLORS } from "../utils/constants";
+import { formatEnvValue } from "../utils/bulkImport";
+import {
+  CLIPBOARD_CLEAR_DELAY_MS,
+  clearClipboardIfUnchanged,
+  copyText,
+  getClipboard,
+} from "../utils/clipboard";
 import { buildProjectItems, type ProjectLocation, secretsInView } from "../utils/projectItems";
 import { POLICY_INPUT_MAX_LENGTH, parsePolicyInput } from "../utils/rotation";
 import { openUrl, truncate } from "../utils/ui";
@@ -243,6 +250,7 @@ export function ProjectPage({
     visible: activeModal === "bulkImport",
     location,
     allSecrets: secrets,
+    renderer,
     onClose: closeModal,
     updateSecretBulk,
     deleteSecret,
@@ -274,6 +282,33 @@ export function ProjectPage({
   const toggleSecrets = () => {
     if (showSecrets) setShowSecrets(false);
     else unlock.requireUnlock(() => setShowSecrets(true));
+  };
+
+  const copySecret = (withKey: boolean) => {
+    const secret = secretsInLocation.find((s) => s.id === selectedSecret?.id);
+    if (!secret) return;
+    unlock.requireUnlock(() => {
+      decryptSecrets([secret])
+        .then(async (values) => {
+          const value = values.get(secret.id);
+          if (value === undefined) {
+            showError(`Couldn't decrypt ${secret.key}. Reload the project and try again.`);
+            return;
+          }
+          const text = withKey ? `${secret.key}=${formatEnvValue(value)}` : value;
+          if (!(await copyText(getClipboard(renderer), text))) {
+            showError("Couldn't access the clipboard");
+            return;
+          }
+          trackEvent("secret_copied", { withKey });
+          showSuccess(`Copied ${secret.key} · clears in ${CLIPBOARD_CLEAR_DELAY_MS / 1000}s`);
+          setTimeout(
+            () => void clearClipboardIfUnchanged(getClipboard(renderer), text),
+            CLIPBOARD_CLEAR_DELAY_MS,
+          );
+        })
+        .catch((error: unknown) => showError(extractErrorMessage(error)));
+    });
   };
 
   const whenWritable = (action: () => void) => {
@@ -429,7 +464,11 @@ export function ProjectPage({
         { key: "v", description: showSecrets ? "Hide values" : "Show values", category: "View" },
       );
       if (selectedSecret) {
-        cmds.push({ key: "t", description: "Secret history", category: "View" });
+        cmds.push(
+          { key: "y", description: "Copy value", category: "View" },
+          { key: "Y", description: "Copy as KEY=value", category: "View" },
+          { key: "t", description: "Secret history", category: "View" },
+        );
       }
     }
     cmds.push(
@@ -472,6 +511,12 @@ export function ProjectPage({
       case "t":
         openHistory();
         break;
+      case "y":
+        copySecret(false);
+        break;
+      case "Y":
+        copySecret(true);
+        break;
       case "r":
         openPolicyEditor();
         break;
@@ -499,7 +544,7 @@ export function ProjectPage({
     if (isBusy || unlock.isVerifying) return;
 
     if (activeModal === "bulkImport") {
-      bulkImport.handleKey(key);
+      if (bulkImport.handleKey(key)) key.preventDefault();
       return;
     }
 
@@ -549,6 +594,8 @@ export function ProjectPage({
       toggleSecrets();
     } else if (key.name === "t") {
       openHistory();
+    } else if (key.name === "y") {
+      copySecret(key.shift);
     } else if (key.name === "r") {
       openPolicyEditor();
     } else if (key.name === "q") {
@@ -609,7 +656,12 @@ export function ProjectPage({
               : []),
             { key: "d", description: "delete", disabled: disabled || !hasSelection },
             { key: "r", description: "rotation", disabled },
-            ...(selectedSecret ? [{ key: "t", description: "history", disabled: isDisabled }] : []),
+            ...(selectedSecret
+              ? [
+                  { key: "y", description: "copy", disabled: isDisabled },
+                  { key: "t", description: "history", disabled: isDisabled },
+                ]
+              : []),
           ];
 
     const secondary: Shortcut[] = [
@@ -844,12 +896,13 @@ export function ProjectPage({
 
       <BulkImportModal
         visible={activeModal === "bulkImport"}
+        editorRef={bulkImport.editorRef}
+        initialContent={bulkImport.initialContent}
         content={bulkImport.content}
-        cursor={bulkImport.cursor}
         format={bulkImport.format}
+        validation={bulkImport.validation}
         collisions={bulkImport.collisions}
-        cursorVisible={true}
-        onClose={bulkImport.close}
+        onContentChange={bulkImport.syncContent}
       />
 
       <Modal visible={unlock.isPromptVisible} title="Enter password" width={50} height={8}>

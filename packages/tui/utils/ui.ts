@@ -98,73 +98,50 @@ function highlightJsonLine(line: string): HighlightedPart[] {
   return parts.length === 0 ? [{ text: " ", color: THEME_COLORS.text }] : parts;
 }
 
-export function highlightLine(line: string, format: "env" | "json"): HighlightedPart[] {
-  return format === "env" ? highlightEnvLine(line) : highlightJsonLine(line);
+function findQuote(text: string, from: number, quote: string): number {
+  for (let i = from; i < text.length; i++) {
+    if (quote === '"' && text[i] === "\\") i++;
+    else if (text[i] === quote) return i;
+  }
+  return -1;
 }
 
-export function wrapLine(line: string, maxWidth: number): string[] {
-  if (line.length <= maxWidth) return [line];
+/** The quote a line leaves open, so the following lines are colored as part of that value. */
+function openQuoteAfter(line: string): string | null {
+  if (line.trimStart().startsWith("#")) return null;
+  const equalsIndex = line.indexOf("=");
+  if (equalsIndex <= 0) return null;
+  const value = line.slice(equalsIndex + 1).trimStart();
+  const quote = value[0];
+  if (quote !== '"' && quote !== "'") return null;
+  return findQuote(value, 1, quote) === -1 ? quote : null;
+}
 
-  const result: string[] = [];
-  let remaining = line;
-
-  while (remaining.length > 0) {
-    if (remaining.length <= maxWidth) {
-      result.push(remaining);
-      break;
+function highlightEnvContent(lines: string[]): HighlightedPart[][] {
+  const result: HighlightedPart[][] = [];
+  let openQuote: string | null = null;
+  for (const line of lines) {
+    if (openQuote) {
+      const closing = findQuote(line, 0, openQuote);
+      if (closing === -1) {
+        result.push([{ text: line, color: THEME_COLORS.secondary }]);
+        continue;
+      }
+      result.push([
+        { text: line.slice(0, closing + 1), color: THEME_COLORS.secondary },
+        { text: line.slice(closing + 1), color: THEME_COLORS.textMuted },
+      ]);
+      openQuote = null;
+      continue;
     }
-
-    let breakPoint = maxWidth;
-    const segment = remaining.slice(0, maxWidth + 1);
-    const lastSpace = segment.lastIndexOf(" ");
-
-    if (lastSpace > 0 && lastSpace < maxWidth) {
-      breakPoint = lastSpace;
-    }
-
-    result.push(remaining.slice(0, breakPoint));
-    remaining = remaining.slice(breakPoint).trimStart();
+    result.push(highlightEnvLine(line));
+    openQuote = openQuoteAfter(line);
   }
-
   return result;
 }
 
-export function mapCursorToWrappedLines(
-  lines: string[],
-  cursor: { line: number; column: number },
-  maxWidth: number,
-): {
-  wrappedLine: number;
-  wrappedColumn: number;
-  allWrappedLines: string[];
-} {
-  const allWrappedLines: string[] = [];
-  let wrappedLine = 0;
-  let wrappedColumn = cursor.column;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] || "";
-    const wrapped = wrapLine(line, maxWidth);
-
-    if (i < cursor.line) {
-      wrappedLine += wrapped.length;
-      allWrappedLines.push(...wrapped);
-    } else if (i === cursor.line) {
-      let charCount = 0;
-      for (let j = 0; j < wrapped.length; j++) {
-        const wrappedSegment = wrapped[j] || "";
-        if (charCount + wrappedSegment.length >= cursor.column) {
-          wrappedColumn = cursor.column - charCount;
-          break;
-        }
-        charCount += wrappedSegment.length;
-        wrappedLine++;
-      }
-      allWrappedLines.push(...wrapped);
-    } else {
-      allWrappedLines.push(...wrapped);
-    }
-  }
-
-  return { wrappedLine, wrappedColumn, allWrappedLines };
+/** Colored parts for every line of `content`; an empty line may yield a single padding space. */
+export function highlightContent(content: string, format: "env" | "json"): HighlightedPart[][] {
+  const lines = content.split("\n");
+  return format === "env" ? highlightEnvContent(lines) : lines.map(highlightJsonLine);
 }
