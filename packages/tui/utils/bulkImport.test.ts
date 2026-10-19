@@ -1,12 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
+  collapseJsonValues,
   computeRemovedKeys,
   envToJson,
+  expandJsonValue,
   findCollisions,
   formatEnvValue,
   jsonToEnv,
   parseEnvContent,
   resolveType,
+  stringifyJsonValue,
   validateBulkImportJson,
 } from "./bulkImport";
 
@@ -33,14 +36,41 @@ describe("env serialization", () => {
     expect(roundTrip(value)).toBe(value);
   });
 
-  test("keeps every value on a single line", () => {
+  test("writes multi-line values with real line breaks in single quotes", () => {
     const env = jsonToEnv(
       JSON.stringify([
         { key: "A", value: "x\ny" },
         { key: "B", value: "z" },
       ]),
     );
-    expect(env.split("\n")).toEqual(['A="x\\ny"', "B=z"]);
+    expect(env.split("\n")).toEqual(["A='x", "y'", "B=z"]);
+  });
+
+  test("keeps pretty-printed JSON readable", () => {
+    const json = JSON.stringify({ db: { host: "localhost", port: 5432 } }, null, 2);
+    expect(formatEnvValue(json)).toBe(`'${json}'`);
+    expect(roundTrip(json)).toBe(json);
+  });
+
+  test("falls back to escaped double quotes when a multi-line value has a single quote", () => {
+    expect(formatEnvValue("it's\nhere")).toBe('"it\'s\\nhere"');
+    expect(roundTrip("it's\nhere")).toBe("it's\nhere");
+  });
+
+  test("reads single-quoted values that span multiple lines", () => {
+    const secrets = parseEnvContent("CONFIG='{\n  \"a\": 1  \n}'\nNEXT=1");
+    expect(secrets.map((s) => [s.key, s.value])).toEqual([
+      ["CONFIG", '{\n  "a": 1  \n}'],
+      ["NEXT", "1"],
+    ]);
+  });
+
+  test("reads an unterminated single quote as a literal single-line value", () => {
+    const secrets = parseEnvContent("A='open\nB=2");
+    expect(secrets.map((s) => [s.key, s.value])).toEqual([
+      ["A", "'open"],
+      ["B", "2"],
+    ]);
   });
 
   test("escapes quotes and backslashes", () => {
@@ -67,6 +97,53 @@ describe("env serialization", () => {
 
   test("ignores trailing text after a closing quote", () => {
     expect(parseEnvContent('KEY="value" # comment')[0]?.value).toBe("value");
+  });
+});
+
+describe("nested JSON values", () => {
+  const pretty = JSON.stringify({ db: { host: "localhost" } }, null, 2);
+
+  test("expands object and array values but leaves other strings alone", () => {
+    expect(expandJsonValue(pretty)).toEqual({ db: { host: "localhost" } });
+    expect(expandJsonValue("[1,2]")).toEqual([1, 2]);
+    expect(expandJsonValue("42")).toBe("42");
+    expect(expandJsonValue("{not json")).toBe("{not json");
+  });
+
+  test("shows JSON values as nested objects in JSON mode", () => {
+    const json = JSON.parse(envToJson(`CONFIG='${pretty}'\nPLAIN=x`));
+    expect(json[0].value).toEqual({ db: { host: "localhost" } });
+    expect(json[1].value).toBe("x");
+  });
+
+  test("keeps the original text when the nested value is unchanged", () => {
+    const compactSpacing = '{ "a" : 1 }';
+    const originals = new Map([["CONFIG", compactSpacing]]);
+    expect(stringifyJsonValue({ a: 1 }, compactSpacing)).toBe(compactSpacing);
+    const [item] = collapseJsonValues([{ key: "CONFIG", value: { a: 1 } }], originals) as Array<{
+      value: string;
+    }>;
+    expect(item?.value).toBe(compactSpacing);
+  });
+
+  test("follows the original layout when the nested value changes", () => {
+    expect(stringifyJsonValue({ a: 2 }, '{\n  "a": 1\n}')).toBe('{\n  "a": 2\n}');
+    expect(stringifyJsonValue({ a: 2 }, '{"a":1}')).toBe('{"a":2}');
+    expect(stringifyJsonValue({ a: 2 })).toBe('{"a":2}');
+  });
+
+  test("validates collapsed values as strings", () => {
+    const result = validateBulkImportJson(
+      collapseJsonValues([{ key: "CONFIG", value: { a: 1 }, type: "number" }]),
+    );
+    expect(result.valid).toBe(true);
+    expect(result.secrets[0]).toMatchObject({ value: '{"a":1}', type: "string" });
+  });
+
+  test("round-trips through JSON mode back to .env without changing the value", () => {
+    const originals = new Map([["CONFIG", pretty]]);
+    const env = jsonToEnv(envToJson(`CONFIG='${pretty}'`), originals);
+    expect(parseEnvContent(env)[0]?.value).toBe(pretty);
   });
 });
 

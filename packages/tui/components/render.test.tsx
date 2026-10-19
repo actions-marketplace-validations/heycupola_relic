@@ -1,8 +1,13 @@
 /** @jsxImportSource @opentui/react */
 import { afterEach, describe, expect, test } from "bun:test";
+import { RGBA } from "@opentui/core";
+import { useKeyboard, useRenderer } from "@opentui/react";
 import { testRender } from "@opentui/react/test-utils";
-import type { ReactNode } from "react";
+import { act, type ReactNode, useEffect } from "react";
+import { useBulkImport } from "../hooks/useBulkImport";
 import { TaskProvider } from "../hooks/useTaskQueue";
+import { THEME_COLORS } from "../utils/constants";
+import { BulkImportModal } from "./modals/BulkImportModal";
 import { CommandPaletteModal } from "./modals/CommandPaletteModal";
 import { ConfirmPaymentModal } from "./modals/ConfirmPaymentModal";
 import { ManageCollaboratorsModal } from "./modals/ManageCollaboratorsModal";
@@ -177,6 +182,98 @@ describe("ProjectItemList", () => {
       />,
     );
     expect(captureCharFrame()).toContain("No secrets yet");
+  });
+});
+
+describe("BulkImportModal", () => {
+  let editor: ReturnType<typeof useBulkImport> | null = null;
+
+  function Editor({ values }: { values: Map<string, string> }) {
+    const renderer = useRenderer();
+    const bulkImport = useBulkImport({
+      visible: true,
+      location: { viewLevel: "environment", environmentId: "env1", folderId: null },
+      allSecrets: [],
+      renderer,
+      onClose: noop,
+      updateSecretBulk: async () => {},
+      deleteSecret: async () => {},
+    });
+    editor = bulkImport;
+    // biome-ignore lint/correctness/useExhaustiveDependencies: opens once on mount
+    useEffect(() => {
+      const secrets = [...values.keys()].map((key) => ({
+        id: key,
+        key,
+        environmentId: "env1",
+        encryptedValue: "",
+        type: "string" as const,
+        scope: "shared" as const,
+      }));
+      bulkImport.open(secrets as never, new Map([...values].map(([k, v]) => [k, v])));
+    }, []);
+    useKeyboard((key) => {
+      if (bulkImport.handleKey(key)) key.preventDefault();
+    });
+    return (
+      <BulkImportModal
+        visible={true}
+        editorRef={bulkImport.editorRef}
+        initialContent={bulkImport.initialContent}
+        content={bulkImport.content}
+        format={bulkImport.format}
+        validation={bulkImport.validation}
+        collisions={bulkImport.collisions}
+        onContentChange={bulkImport.syncContent}
+      />
+    );
+  }
+
+  async function renderEditor(values: Record<string, string>) {
+    const setup = await render(<Editor values={new Map(Object.entries(values))} />, 100, 40);
+    await setup.renderOnce();
+    const step = async (fn: () => unknown) => {
+      await act(async () => {
+        await fn();
+      });
+      await setup.renderOnce();
+    };
+    return { ...setup, step };
+  }
+
+  test("shows multi-line JSON values with real line breaks", async () => {
+    const config = JSON.stringify({ host: "db", port: 5432 }, null, 2);
+    const { captureCharFrame } = await renderEditor({ CONFIG: config });
+    const frame = captureCharFrame();
+    expect(frame).toContain("CONFIG='{");
+    expect(frame).toContain('"host": "db",');
+    expect(frame).toContain("1 secrets ready");
+  });
+
+  test("colors keys and continuation lines of a multi-line value", async () => {
+    const { captureSpans } = await renderEditor({ CONFIG: '{\n  "a": 1\n}' });
+    const spans = captureSpans().lines.flatMap((line) => line.spans);
+    const colorOf = (text: string) => spans.find((s) => s.text.includes(text))?.fg;
+    expect(colorOf("CONFIG")).toEqual(RGBA.fromHex(THEME_COLORS.primary));
+    expect(colorOf('"a": 1')).toEqual(RGBA.fromHex(THEME_COLORS.secondary));
+  });
+
+  test("supports select-all, typing over the selection, and undo", async () => {
+    const { mockInput, step } = await renderEditor({ A: "1" });
+    await step(() => mockInput.pressKey("a", { ctrl: true }));
+    await step(() => mockInput.typeText("B=2"));
+    expect(editor?.content).toBe("B=2");
+    await step(() => mockInput.pressKey("z", { ctrl: true }));
+    expect(editor?.content).not.toBe("B=2");
+  });
+
+  test("shows nested JSON in JSON mode and keeps the stored text when saving", async () => {
+    const config = '{"host":"db"}';
+    const { mockInput, step, captureCharFrame } = await renderEditor({ CONFIG: config });
+    await step(() => mockInput.pressKey("t", { ctrl: true }));
+    expect(editor?.format).toBe("json");
+    expect(captureCharFrame()).toContain('"host": "db"');
+    expect(editor?.validation.secrets[0]?.value).toBe(config);
   });
 });
 
