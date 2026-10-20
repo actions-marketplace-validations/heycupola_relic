@@ -7,11 +7,6 @@ export interface Key {
   sequence: string;
 }
 
-export interface CursorPosition {
-  line: number;
-  column: number;
-}
-
 export interface Shortcut {
   key: string;
   description: string;

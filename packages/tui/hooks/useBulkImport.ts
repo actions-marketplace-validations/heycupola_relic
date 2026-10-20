@@ -1,3 +1,4 @@
+import type { CliRenderer, KeyEvent, TextareaRenderable } from "@opentui/core";
 import { createLogger, trackEvent } from "@repo/logger";
 import { useMemo, useRef, useState } from "react";
 import type { Key } from "../types/keyboard";
@@ -5,21 +6,29 @@ import type { Secret, SecretScope, SecretValueType } from "../types/models";
 import {
   type BulkImportFormat,
   type CollisionInfo,
+  collapseJsonValues,
   computeRemovedKeys,
   envToJson,
   findCollisions,
   jsonToEnv,
   parseEnvContent,
+  type ValidationResult,
   validateBulkImportJson,
 } from "../utils/bulkImport";
+import { copyText, getClipboard } from "../utils/clipboard";
 import { type ProjectLocation, secretsInView } from "../utils/projectItems";
-import { useMultiLineInput } from "./useInput";
-import { usePaste } from "./usePaste";
 import { useTaskQueue } from "./useTaskQueue";
 
 const logger = createLogger("tui");
 
 const EMPTY_TEMPLATE = "# Add your secrets here\nAPI_KEY=your_key_here";
+const TAB_TEXT = "  ";
+const EMPTY_VALIDATION: ValidationResult = {
+  valid: false,
+  secrets: [],
+  errors: [],
+  duplicateKeys: [],
+};
 
 interface OriginalSecret {
   secretId: string;
@@ -32,6 +41,7 @@ interface UseBulkImportOptions {
   visible: boolean;
   location: ProjectLocation;
   allSecrets: Secret[];
+  renderer: CliRenderer;
   onClose: () => void;
   updateSecretBulk: (args: {
     environmentId: string;
@@ -53,9 +63,12 @@ function parseContent(
   content: string,
   format: BulkImportFormat,
   knownTypes: ReadonlyMap<string, SecretValueType>,
+  originalValues: ReadonlyMap<string, string>,
 ) {
   return validateBulkImportJson(
-    format === "env" ? parseEnvContent(content, knownTypes) : JSON.parse(content),
+    format === "env"
+      ? parseEnvContent(content, knownTypes)
+      : collapseJsonValues(JSON.parse(content), originalValues),
   );
 }
 
@@ -67,42 +80,69 @@ export function isToggleFormatKey(key: Key): boolean {
   return (key.name === "t" && key.ctrl) || (key.name === "j" && key.meta);
 }
 
+// NOTE: Ctrl+C quits the app, so copy takes ⌘C (kitty keyboard protocol), ⌥C, or Ctrl+Shift+C.
+export function isCopyKey(key: KeyEvent): boolean {
+  return key.name === "c" && (key.super || key.meta || (key.ctrl && key.shift));
+}
+
+export function isCutKey(key: KeyEvent): boolean {
+  return key.name === "x" && (key.ctrl || key.super || key.meta);
+}
+
 export function useBulkImport({
   visible,
   location,
   allSecrets,
+  renderer,
   onClose,
   updateSecretBulk,
   deleteSecret,
 }: UseBulkImportOptions) {
-  const { attemptTask, showSuccess } = useTaskQueue();
-  const input = useMultiLineInput({ maxLines: 50 });
+  const { attemptTask, showSuccess, showError } = useTaskQueue();
+  const editorRef = useRef<TextareaRenderable | null>(null);
+  const [content, setContent] = useState("");
+  const [initialContent, setInitialContent] = useState("");
   const [format, setFormat] = useState<BulkImportFormat>("env");
   const [scopes, setScopes] = useState<Map<string, string>>(new Map());
   const [types, setTypes] = useState<Map<string, SecretValueType>>(new Map());
   const [originals, setOriginals] = useState<Map<string, OriginalSecret>>(new Map());
   const savingRef = useRef(false);
 
-  const collisions = useMemo<CollisionInfo[]>(() => {
-    const trimmed = input.value.trim();
-    if (!visible || !trimmed) return [];
-    try {
-      const result = parseContent(trimmed, format, types);
-      if (!result.valid) return [];
-      const prefilledIds = new Set([...originals.values()].map((o) => o.secretId));
-      return findCollisions(
-        result.secrets.map((s) => s.key),
-        secretsInView(allSecrets, location),
-        prefilledIds,
-      );
-    } catch {
-      return [];
-    }
-  }, [visible, input.value, format, types, originals, allSecrets, location]);
+  const originalValues = useMemo(
+    () => new Map([...originals].map(([key, o]) => [key, o.value])),
+    [originals],
+  );
 
-  usePaste((text) => {
-    if (visible) input.handlePaste(text);
-  });
+  const validation = useMemo((): ValidationResult => {
+    const trimmed = content.trim();
+    if (!visible || !trimmed) return EMPTY_VALIDATION;
+    try {
+      return parseContent(trimmed, format, types, originalValues);
+    } catch {
+      return { ...EMPTY_VALIDATION, errors: [{ message: "Invalid JSON syntax" }] };
+    }
+  }, [visible, content, format, types, originalValues]);
+
+  const collisions = useMemo<CollisionInfo[]>(() => {
+    if (!validation.valid) return [];
+    const prefilledIds = new Set([...originals.values()].map((o) => o.secretId));
+    return findCollisions(
+      validation.secrets.map((s) => s.key),
+      secretsInView(allSecrets, location),
+      prefilledIds,
+    );
+  }, [validation, originals, allSecrets, location]);
+
+  /** Before the editor mounts the text becomes its initial value; afterwards it is an undoable edit. */
+  const setEditorText = (text: string) => {
+    setContent(text);
+    const editor = editorRef.current;
+    if (editor) editor.replaceText(text);
+    else setInitialContent(text);
+  };
+
+  const readContent = () => editorRef.current?.plainText ?? content;
+  const syncContent = () => setContent(editorRef.current?.plainText ?? "");
 
   const open = (secrets: Secret[], values: ReadonlyMap<string, string>) => {
     const loaded = new Map<string, OriginalSecret>();
@@ -121,40 +161,40 @@ export function useBulkImport({
     setTypes(new Map([...loaded].map(([key, o]) => [key, o.type])));
 
     if (loaded.size === 0) {
-      input.setValue(EMPTY_TEMPLATE);
+      setEditorText(EMPTY_TEMPLATE);
     } else {
       const secretsJson = JSON.stringify(
         [...loaded].map(([key, o]) => ({ key, value: o.value, type: o.type, scope: o.scope })),
       );
-      input.setValue(jsonToEnv(secretsJson) || "");
+      setEditorText(jsonToEnv(secretsJson) || "");
     }
-    input.setCursor({ line: 0, column: 0 });
     setFormat("env");
   };
 
   const close = () => {
     onClose();
-    input.reset();
+    setContent("");
+    setInitialContent("");
     setOriginals(new Map());
     setScopes(new Map());
     setTypes(new Map());
   };
 
   const toggleFormat = () => {
-    const content = input.value.trim();
-    if (!content) return;
+    const current = readContent().trim();
+    if (!current) return;
 
     if (format === "env") {
-      const json = envToJson(content, scopes, types);
+      const json = envToJson(current, scopes, types);
       if (json && json !== "[]") {
-        input.setValue(json);
+        setEditorText(json);
         setFormat("json");
       }
       return;
     }
 
     try {
-      const parsed = JSON.parse(content);
+      const parsed = JSON.parse(current);
       if (Array.isArray(parsed)) {
         const updatedScopes = new Map(scopes);
         const updatedTypes = new Map(types);
@@ -170,22 +210,37 @@ export function useBulkImport({
     } catch {
       // Invalid JSON keeps the previous scopes and types
     }
-    const env = jsonToEnv(content);
+    const env = jsonToEnv(current, originalValues);
     if (env) {
-      input.setValue(env);
+      setEditorText(env);
       setFormat("env");
     }
   };
 
+  const copySelection = async (cut: boolean) => {
+    const editor = editorRef.current;
+    const text = editor?.hasSelection() ? editor.getSelectedText() : "";
+    if (!editor || !text) return;
+    if (!(await copyText(getClipboard(renderer), text))) {
+      showError("Couldn't access the clipboard");
+      return;
+    }
+    if (cut) {
+      editor.deleteSelection();
+      syncContent();
+    }
+    showSuccess(cut ? "Cut selection" : "Copied selection");
+  };
+
   const save = async () => {
     if (savingRef.current) return;
-    const trimmed = input.value.trim();
+    const trimmed = readContent().trim();
     const { environmentId } = location;
     if (!trimmed || !environmentId) return;
 
     let result: ReturnType<typeof parseContent>;
     try {
-      result = parseContent(trimmed, format, types);
+      result = parseContent(trimmed, format, types, originalValues);
     } catch (error) {
       logger.debug("Bulk import parse failed:", error);
       return;
@@ -248,20 +303,32 @@ export function useBulkImport({
     }
   };
 
-  const handleKey = (key: Key) => {
+  /** Returns true when the key was handled here; any other key is left to the editor. */
+  const handleKey = (key: KeyEvent): boolean => {
     if (key.name === "escape") close();
     else if (isToggleFormatKey(key)) toggleFormat();
     else if (isSaveKey(key)) void save();
-    else input.handleKey(key);
+    else if (isCopyKey(key)) void copySelection(false);
+    else if (isCutKey(key)) void copySelection(true);
+    else if (key.name === "tab" && !key.ctrl && !key.meta) editorRef.current?.insertText(TAB_TEXT);
+    else {
+      // NOTE: The editor handles the key after this returns, and undo/redo emit no content change.
+      queueMicrotask(syncContent);
+      return false;
+    }
+    return true;
   };
 
   return {
     open,
     close,
     handleKey,
-    content: input.value,
-    cursor: input.cursor,
+    editorRef,
+    initialContent,
+    content,
+    syncContent,
     format,
+    validation,
     collisions,
   };
 }
