@@ -509,7 +509,6 @@ export function HomePage() {
         visible={activeModal === "logout"}
         title="Log out"
         width={45}
-        height={8}
         shortcuts={[
           { key: "y", description: "yes", disabled: isProcessing },
           { key: "n", description: "no", disabled: isProcessing },
@@ -519,13 +518,7 @@ export function HomePage() {
       </Modal>
 
       {/* NOTE: shortcuts={[]} because PasswordInput has its own GuideBar with contextual labels */}
-      <Modal
-        visible={activeModal === "password"}
-        title="Change password"
-        width={55}
-        height={18}
-        shortcuts={[]}
-      >
+      <Modal visible={activeModal === "password"} title="Change password" width={55} shortcuts={[]}>
         <PasswordInput
           mode="change"
           onSubmit={(currentPass, newPass) => {
