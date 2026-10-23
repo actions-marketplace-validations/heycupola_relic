@@ -196,7 +196,6 @@ export function PasswordSetupPage({
         visible={showLogoutModal}
         title="Log out"
         width={45}
-        height={8}
         shortcuts={[
           { key: "y", description: "yes", disabled: !!taskStatus },
           { key: "n", description: "no", disabled: !!taskStatus },
