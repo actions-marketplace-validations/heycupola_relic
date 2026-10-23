@@ -91,6 +91,8 @@ export function isPasswordFromEnv(): boolean {
 }
 
 let cachedPassword: string | null | undefined;
+// NOTE: Each keychain read can trigger an OS access prompt, so concurrent callers share one read.
+let pendingPasswordRead: Promise<string | null> | null = null;
 
 export async function getPasswordFromStorage(): Promise<string | null> {
   const envPassword = process.env[ENV_PASSWORD_KEY];
@@ -102,6 +104,15 @@ export async function getPasswordFromStorage(): Promise<string | null> {
     return cachedPassword;
   }
 
+  if (!pendingPasswordRead) {
+    pendingPasswordRead = readPasswordFromStorage().finally(() => {
+      pendingPasswordRead = null;
+    });
+  }
+  return pendingPasswordRead;
+}
+
+async function readPasswordFromStorage(): Promise<string | null> {
   const { secrets } = await import("bun");
   try {
     const password = await secrets.get({ service: SECRETS_SERVICE, name: SECRETS_NAME });

@@ -905,7 +905,7 @@ export function ProjectPage({
         onContentChange={bulkImport.syncContent}
       />
 
-      <Modal visible={unlock.isPromptVisible} title="Enter password" width={50} height={8}>
+      <Modal visible={unlock.isPromptVisible} title="Enter password" width={50}>
         <PasswordInput
           mode="verify"
           onSubmit={unlock.verify}
