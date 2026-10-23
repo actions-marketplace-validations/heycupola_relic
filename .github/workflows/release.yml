@@ -226,6 +226,7 @@ jobs:
       sha_darwin_arm64: ${{ steps.homebrew_shas.outputs.sha_darwin_arm64 }}
       sha_darwin_x64: ${{ steps.homebrew_shas.outputs.sha_darwin_x64 }}
       sha_linux_x64: ${{ steps.homebrew_shas.outputs.sha_linux_x64 }}
+      sha_win32_x64: ${{ steps.homebrew_shas.outputs.sha_win32_x64 }}
     env:
       VERSION: ${{ needs.check-version.outputs.new-version }}
 
@@ -246,12 +247,13 @@ jobs:
             cp artifacts/cli-$platform/relic-$platform.* dist/ 2>/dev/null || true
           done
 
-      - name: Compute Homebrew tap checksums
+      - name: Compute Homebrew and Scoop checksums
         id: homebrew_shas
         run: |
           echo "sha_darwin_arm64=$(sha256sum dist/relic-darwin-arm64.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
           echo "sha_darwin_x64=$(sha256sum dist/relic-darwin-x64.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
           echo "sha_linux_x64=$(sha256sum dist/relic-linux-x64.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "sha_win32_x64=$(sha256sum dist/relic-win32-x64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Populate npm platform packages
         run: |
@@ -353,7 +355,7 @@ jobs:
           npm publish --access public --provenance
 
   sync-changelog:
-    name: Sync Changelog Content
+    name: Sync Changelog and Scoop Manifest
     needs: [check-version, release]
     if: needs.check-version.outputs.version-changed == 'true'
     runs-on: ubuntu-latest
@@ -389,25 +391,46 @@ jobs:
           EXPECTED_RELEASE_TAG: ${{ env.EXPECTED_RELEASE_TAG }}
         run: bun run sync:changelog
 
-      - name: Open changelog pull request
+      - name: Update Scoop manifest
+        env:
+          VERSION: ${{ needs.check-version.outputs.new-version }}
+          SHA_WIN32_X64: ${{ needs.release.outputs.sha_win32_x64 }}
+        run: |
+          if [ -z "$SHA_WIN32_X64" ]; then
+            echo "Missing the Windows archive checksum"
+            exit 1
+          fi
+          node -e "
+            const fs = require('fs');
+            const path = 'scoop/relic.json';
+            const manifest = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const { VERSION, SHA_WIN32_X64 } = process.env;
+            manifest.version = VERSION;
+            manifest.architecture['64bit'].url =
+              'https://github.com/heycupola/relic/releases/download/v' + VERSION + '/relic-win32-x64.zip';
+            manifest.architecture['64bit'].hash = SHA_WIN32_X64;
+            fs.writeFileSync(path, JSON.stringify(manifest, null, 2) + '\n');
+          "
+
+      - name: Open release sync pull request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if git diff --quiet -- apps/web/content/changelog/generated; then
-            echo "No changelog updates to commit."
+          if git diff --quiet -- apps/web/content/changelog/generated scoop/relic.json; then
+            echo "No changelog or Scoop manifest updates to commit."
             exit 0
           fi
 
           branch="chore/sync-changelog-${EXPECTED_RELEASE_TAG}-${GITHUB_RUN_ID}"
           git checkout -b "$branch"
-          git add apps/web/content/changelog/generated
+          git add apps/web/content/changelog/generated scoop/relic.json
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit -m "chore: sync changelog from GitHub releases"
+            commit -m "chore: sync changelog and Scoop manifest from ${EXPECTED_RELEASE_TAG}"
           git push -u origin "$branch"
 
           gh pr create --base "$TARGET_BRANCH" --head "$branch" \
-            --title "chore: sync changelog from ${EXPECTED_RELEASE_TAG}" \
-            --body "Generated website changelog pages from GitHub releases. main only accepts pull requests, so this job opens one instead of pushing directly."
+            --title "chore: sync changelog and Scoop manifest from ${EXPECTED_RELEASE_TAG}" \
+            --body "Generated website changelog pages from GitHub releases and pointed \`scoop/relic.json\` at the ${EXPECTED_RELEASE_TAG} Windows archive. main only accepts pull requests, so this job opens one instead of pushing directly."
 
   update-homebrew-tap:
     name: Update Homebrew Tap
