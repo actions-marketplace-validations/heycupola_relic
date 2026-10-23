@@ -247,7 +247,7 @@ describe("BulkImportModal", () => {
     const frame = captureCharFrame();
     expect(frame).toContain("CONFIG='{");
     expect(frame).toContain('"host": "db",');
-    expect(frame).toContain("1 secrets ready");
+    expect(frame).toContain("1 secret ready");
   });
 
   test("colors keys and continuation lines of a multi-line value", async () => {

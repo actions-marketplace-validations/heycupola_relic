@@ -47,7 +47,7 @@ export function PasswordInput({
   const requirements = checkPasswordRequirements(passwordValue);
   const validation = validatePassword(passwordValue);
   const passwordsMatch = confirmValue.length > 0 && confirmValue === passwordValue;
-  const showStrength = mode !== "verify" && focusedField === "password";
+  const showStrength = mode !== "verify";
 
   const cycleFocus = (direction: "next" | "prev") => {
     type FieldName = "current" | "password" | "confirm";

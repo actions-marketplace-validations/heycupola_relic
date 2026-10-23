@@ -10,7 +10,7 @@ import type {
   ValidationResult,
 } from "../../utils/bulkImport";
 import { THEME_COLORS } from "../../utils/constants";
-import { highlightContent } from "../../utils/ui";
+import { highlightContent, truncate } from "../../utils/ui";
 import { Modal } from "../shared/Modal";
 
 interface BulkImportModalProps {
@@ -28,7 +28,7 @@ const MAX_EDITOR_ROWS = 18;
 const MIN_EDITOR_ROWS = 5;
 const MAX_EDITOR_COLUMNS = 76;
 /** Rows the modal needs around the editor: title, format row, status, info, guide bar, padding. */
-const MODAL_CHROME_HEIGHT = 15;
+const MODAL_CHROME_HEIGHT = 14;
 
 /** Merged over OpenTUI's defaults; Ctrl+A selects all like a GUI editor, so Home goes to line start. */
 const EDITOR_KEY_BINDINGS: KeyBinding[] = [
@@ -161,17 +161,21 @@ export function BulkImportModal({
             />
           </line-number>
         </box>
-        <box height={2} marginTop={1} flexDirection="column">
+        <box height={1} marginTop={1}>
           {validation.errors.length > 0 && (
-            <text>
+            <text wrapMode="none">
               <span fg={THEME_COLORS.error}>✗ </span>
-              <span fg={THEME_COLORS.textMuted}>{validation.errors[0]?.message}</span>
+              <span fg={THEME_COLORS.textMuted}>
+                {truncate(validation.errors[0]?.message ?? "", editorWidth - 2)}
+              </span>
             </text>
           )}
           {validation.valid && (
-            <text>
+            <text wrapMode="none">
               <span fg={THEME_COLORS.success}>✓ </span>
-              <span fg={THEME_COLORS.textMuted}>{validation.secrets.length} secrets ready</span>
+              <span fg={THEME_COLORS.textMuted}>
+                {validation.secrets.length} secret{validation.secrets.length === 1 ? "" : "s"} ready
+              </span>
               {collisions.length > 0 && (
                 <span fg={THEME_COLORS.warning}>
                   {" "}
