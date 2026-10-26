@@ -6,9 +6,150 @@ const KILL_GRACE_MS = 2_000;
 const STREAM_DRAIN_MS = 1_000;
 const IS_POSIX = process.platform !== "win32";
 
+const SHELL_PROGRAMS = new Set([
+  "sh",
+  "bash",
+  "zsh",
+  "dash",
+  "ksh",
+  "fish",
+  "cmd",
+  "cmd.exe",
+  "powershell",
+  "powershell.exe",
+  "pwsh",
+  "pwsh.exe",
+]);
+
+/** Bare `set` with no options/assignments — dumps the shell environment. */
+const SHELL_BARE_SET_RE = /(?:^|[;&\n|]|&&|\|\|)\s*set\s*(?:[;&\n|]|$)/;
+
+const POWERSHELL_ENV_DUMP_RE =
+  /(?:Get-ChildItem|gci|dir|ls)\s+(?:-Path\s+|Path\s*=\s*)?Env:|\[System\.Environment\]::GetEnvironmentVariables/i;
+
 interface RedactionEntry {
   key: string;
   value: string;
+}
+
+export class EnvDumpBlockedError extends Error {
+  readonly pattern: string;
+
+  constructor(pattern: string) {
+    super(
+      `Refusing env-dump command (${pattern}). Common dumps (env, printenv, bare set, PowerShell Env:) ` +
+        "can leak secret values that best-effort redaction cannot fully scrub. " +
+        "Re-run with allowDangerousEnvDump=true only if you understand the risk.",
+    );
+    this.name = "EnvDumpBlockedError";
+    this.pattern = pattern;
+  }
+}
+
+function programBasename(arg: string): string {
+  const base = arg.split(/[/\\]/).pop() ?? arg;
+  return base.toLowerCase();
+}
+
+/** True when `env` argv still has a command after options and NAME=value assignments. */
+function envArgvHasCommand(args: string[]): boolean {
+  let i = 0;
+  while (i < args.length) {
+    const arg = args[i]!;
+    if (arg === "--") {
+      i += 1;
+      break;
+    }
+    if (arg.startsWith("-")) {
+      // `env -u NAME` / `env --unset=NAME` consume a following operand when needed.
+      if (
+        (arg === "-u" || arg === "--unset") &&
+        i + 1 < args.length &&
+        !args[i + 1]!.startsWith("-")
+      ) {
+        i += 2;
+        continue;
+      }
+      i += 1;
+      continue;
+    }
+    if (/^[A-Za-z_][\w]*=/.test(arg)) {
+      i += 1;
+      continue;
+    }
+    return true;
+  }
+  return i < args.length;
+}
+
+function extractShellScript(command: string[]): string | null {
+  for (let i = 1; i < command.length; i++) {
+    const flag = command[i]!.toLowerCase();
+    if (
+      flag === "-c" ||
+      flag === "/c" ||
+      flag === "-command" ||
+      flag === "-encodedcommand" ||
+      flag === "--%"
+    ) {
+      return command.slice(i + 1).join(" ");
+    }
+  }
+  return null;
+}
+
+function detectShellEnvDump(script: string): string | null {
+  if (POWERSHELL_ENV_DUMP_RE.test(script)) return "PowerShell Env:";
+  if (SHELL_BARE_SET_RE.test(script)) return "set";
+  if (/\bprintenv\b/.test(script)) return "printenv";
+  // Prefer a conservative `env` match: bare `env` / `env -0` style, not `env FOO=bar cmd`.
+  if (/(?:^|[;&\n|]|&&|\|\|)\s*(?:\/(?:usr\/)?bin\/)?env\s*(?:[;&\n|]|$)/.test(script)) {
+    return "env";
+  }
+  if (/(?:^|[;&\n|]|&&|\|\|)\s*(?:\/(?:usr\/)?bin\/)?env\s+-[a-zA-Z0-9]*[0u]/.test(script)) {
+    // `env -0` / `env -u` without a following command still dumps or is dump-adjacent; block
+    // when there is no clear trailing command word after options/assignments.
+    const after = script.replace(/^[\s\S]*?\benv\b/, "env");
+    const tokens = after.trim().split(/\s+/);
+    if (!envArgvHasCommand(tokens.slice(1))) return "env";
+  }
+  return null;
+}
+
+/**
+ * Returns a human-readable dump pattern when `command` looks like a common environment dump.
+ * Returns null for normal commands (including `env FOO=bar cmd`).
+ */
+export function detectEnvDumpCommand(command: string[]): string | null {
+  if (command.length === 0) return null;
+
+  const prog = programBasename(command[0]!);
+
+  if (prog === "printenv" || prog === "printenv.exe") return "printenv";
+
+  if (prog === "env" || prog === "env.exe") {
+    return envArgvHasCommand(command.slice(1)) ? null : "env";
+  }
+
+  if ((prog === "set" || prog === "set.exe") && command.length === 1) return "set";
+
+  if (SHELL_PROGRAMS.has(prog)) {
+    const script = extractShellScript(command);
+    if (script) {
+      const hit = detectShellEnvDump(script);
+      if (hit) return hit;
+    }
+  }
+
+  return null;
+}
+
+/** Throws {@link EnvDumpBlockedError} unless `allowDangerousEnvDump` is true. */
+export function assertEnvDumpAllowed(command: string[], allowDangerousEnvDump = false): void {
+  const pattern = detectEnvDumpCommand(command);
+  if (pattern && !allowDangerousEnvDump) {
+    throw new EnvDumpBlockedError(pattern);
+  }
 }
 
 /** Longest values first so a secret that contains another is replaced as a whole. */
