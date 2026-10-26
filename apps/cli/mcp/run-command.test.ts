@@ -106,15 +106,69 @@ describe("detectEnvDumpCommand", () => {
     ).toBe("PowerShell Env:");
   });
 
+  test("blocks shell prefixes before env/set/printenv", () => {
+    expect(detectEnvDumpCommand(["sh", "-c", "exec env"])).toBe("env");
+    expect(detectEnvDumpCommand(["bash", "-c", "command env"])).toBe("env");
+    expect(detectEnvDumpCommand(["bash", "-c", "command -p printenv"])).toBe("printenv");
+    expect(detectEnvDumpCommand(["zsh", "-c", "builtin set"])).toBe("set");
+  });
+
+  test("blocks absolute env paths beyond /bin and /usr/bin", () => {
+    expect(detectEnvDumpCommand(["sh", "-c", "/usr/local/bin/env"])).toBe("env");
+    expect(detectEnvDumpCommand(["sh", "-c", "/opt/homebrew/bin/env"])).toBe("env");
+    expect(detectEnvDumpCommand(["sh", "-c", "/usr/local/bin/printenv"])).toBe("printenv");
+  });
+
+  test("blocks alternate shell env-listing builtins", () => {
+    expect(detectEnvDumpCommand(["bash", "-c", "export -p"])).toBe("export -p");
+    expect(detectEnvDumpCommand(["bash", "-c", "declare -px"])).toBe("declare");
+    expect(detectEnvDumpCommand(["bash", "-c", "declare -x"])).toBe("declare");
+    expect(detectEnvDumpCommand(["zsh", "-c", "typeset -x"])).toBe("typeset -x");
+    expect(detectEnvDumpCommand(["bash", "-c", "compgen -e"])).toBe("compgen -e");
+  });
+
+  test("blocks procfs environ paths", () => {
+    expect(detectEnvDumpCommand(["sh", "-c", "cat /proc/self/environ"])).toBe("/proc/*/environ");
+    expect(detectEnvDumpCommand(["sh", "-c", "tr '\\0' '\\n' < /proc/1/environ"])).toBe(
+      "/proc/*/environ",
+    );
+  });
+
+  test("blocks process wrappers around env/printenv", () => {
+    expect(detectEnvDumpCommand(["nice", "env"])).toBe("env");
+    expect(detectEnvDumpCommand(["nice", "-n", "10", "printenv"])).toBe("printenv");
+    expect(detectEnvDumpCommand(["stdbuf", "-o0", "env"])).toBe("env");
+    expect(detectEnvDumpCommand(["busybox", "env"])).toBe("env");
+    expect(detectEnvDumpCommand(["busybox", "printenv"])).toBe("printenv");
+    expect(detectEnvDumpCommand(["nice", "env", "FOO=bar", "echo", "ok"])).toBeNull();
+  });
+
+  test("blocks PowerShell -EncodedCommand without decoding", () => {
+    // Opaque base64 body — refuse entirely unless allowDangerousEnvDump.
+    expect(
+      detectEnvDumpCommand([
+        "pwsh",
+        "-EncodedCommand",
+        "RwBlAHQALQBDAGgAaQBsAGQASQB0AGUAbQAgAEUAbgB2ADoA",
+      ]),
+    ).toBe("PowerShell -EncodedCommand");
+    expect(detectEnvDumpCommand(["powershell", "-enc", "QQA="])).toBe("PowerShell -EncodedCommand");
+    expect(() => assertEnvDumpAllowed(["pwsh", "-EncodedCommand", "QQA="], true)).not.toThrow();
+  });
+
   test("allows ordinary commands", () => {
     expect(detectEnvDumpCommand(["npm", "test"])).toBeNull();
     expect(detectEnvDumpCommand(["bun", "run", "build"])).toBeNull();
     expect(detectEnvDumpCommand(["sh", "-c", "echo $HOME"])).toBeNull();
+    expect(detectEnvDumpCommand(["sh", "-c", "echo environment"])).toBeNull();
+    expect(detectEnvDumpCommand(["bash", "-c", "declare -i x=1"])).toBeNull();
   });
 
   test("assertEnvDumpAllowed opts in with allowDangerousEnvDump", () => {
     expect(() => assertEnvDumpAllowed(["env"])).toThrow(EnvDumpBlockedError);
     expect(() => assertEnvDumpAllowed(["env"], true)).not.toThrow();
+    expect(() => assertEnvDumpAllowed(["sh", "-c", "export -p"])).toThrow(EnvDumpBlockedError);
+    expect(() => assertEnvDumpAllowed(["sh", "-c", "export -p"], true)).not.toThrow();
   });
 });
 
