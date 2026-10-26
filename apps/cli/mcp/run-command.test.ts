@@ -110,13 +110,17 @@ describe("detectEnvDumpCommand", () => {
     expect(detectEnvDumpCommand(["sh", "-c", "exec env"])).toBe("env");
     expect(detectEnvDumpCommand(["bash", "-c", "command env"])).toBe("env");
     expect(detectEnvDumpCommand(["bash", "-c", "command -p printenv"])).toBe("printenv");
+    expect(detectEnvDumpCommand(["bash", "-c", "command -- env"])).toBe("env");
     expect(detectEnvDumpCommand(["zsh", "-c", "builtin set"])).toBe("set");
   });
 
-  test("blocks absolute env paths beyond /bin and /usr/bin", () => {
+  test("blocks absolute and relative env paths", () => {
     expect(detectEnvDumpCommand(["sh", "-c", "/usr/local/bin/env"])).toBe("env");
     expect(detectEnvDumpCommand(["sh", "-c", "/opt/homebrew/bin/env"])).toBe("env");
     expect(detectEnvDumpCommand(["sh", "-c", "/usr/local/bin/printenv"])).toBe("printenv");
+    expect(detectEnvDumpCommand(["sh", "-c", "./env"])).toBe("env");
+    expect(detectEnvDumpCommand(["sh", "-c", "../usr/bin/env"])).toBe("env");
+    expect(detectEnvDumpCommand(["sh", "-c", "./bin/printenv"])).toBe("printenv");
   });
 
   test("blocks alternate shell env-listing builtins", () => {
@@ -141,6 +145,11 @@ describe("detectEnvDumpCommand", () => {
     expect(detectEnvDumpCommand(["busybox", "env"])).toBe("env");
     expect(detectEnvDumpCommand(["busybox", "printenv"])).toBe("printenv");
     expect(detectEnvDumpCommand(["nice", "env", "FOO=bar", "echo", "ok"])).toBeNull();
+    // Inside shell -c (MCP common shape) — not only argv[0]
+    expect(detectEnvDumpCommand(["sh", "-c", "nice env"])).toBe("env");
+    expect(detectEnvDumpCommand(["sh", "-c", "stdbuf -o0 env"])).toBe("env");
+    expect(detectEnvDumpCommand(["sh", "-c", "busybox env"])).toBe("env");
+    expect(detectEnvDumpCommand(["bash", "-c", "nice -n 10 printenv"])).toBe("printenv");
   });
 
   test("blocks PowerShell -EncodedCommand without decoding", () => {

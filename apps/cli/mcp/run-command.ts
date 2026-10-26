@@ -32,22 +32,30 @@ const PROCESS_WRAPPERS = new Set([
 ]);
 
 /**
- * Optional `exec` / `command` / `builtin` (with short flags) before a dump word.
+ * Optional prefixes before a dump word inside a shell script:
+ * - `exec` / `command` / `builtin` with short flags or `--`
+ * - `nice` / `stdbuf` / `busybox` with short options / numeric args
  * False-positives like `command -v env` are accepted — opt-in still unlocks them.
  */
-const SHELL_WRAPPER_PREFIX = String.raw`(?:(?:exec|command|builtin)(?:\s+-\w+)*\s+)*`;
+const DUMP_PREFIX = String.raw`(?:(?:(?:exec|command|builtin)(?:\s+-\w+|\s+--)*|(?:nice|stdbuf|busybox)(?:\s+(?:-\S+|\d+))*)\s+)*`;
 
-/** Absolute path to `env` (any directory) or bare `env`. */
-const ENV_PROG = String.raw`(?:\/(?:[^\/\s;|&]+\/)+)?env\b`;
+/**
+ * Optional path to `env`/`printenv`: absolute (`/usr/local/bin/env`),
+ * relative (`./env`, `../usr/bin/env`), or bare basename.
+ */
+const ENV_PATH_PREFIX = String.raw`(?:(?:(?:\.\.?\/)+|\/)(?:[^\/\s;|&]+\/)*)?`;
 
-/** Absolute path to `printenv` (any directory) or bare `printenv`. */
-const PRINTENV_PROG = String.raw`(?:\/(?:[^\/\s;|&]+\/)+)?printenv\b`;
+/** Absolute, relative, or bare `env`. */
+const ENV_PROG = String.raw`${ENV_PATH_PREFIX}env\b`;
+
+/** Absolute, relative, or bare `printenv`. */
+const PRINTENV_PROG = String.raw`${ENV_PATH_PREFIX}printenv\b`;
 
 /** Statement boundary before a dump command. */
 const STMT_START = String.raw`(?:^|[;&\n|]|&&|\|\|)\s*`;
 
 /** Bare `set` with no options/assignments — dumps the shell environment. */
-const SHELL_BARE_SET_RE = new RegExp(`${STMT_START}${SHELL_WRAPPER_PREFIX}set\\s*(?:[;&\\n|]|$)`);
+const SHELL_BARE_SET_RE = new RegExp(`${STMT_START}${DUMP_PREFIX}set\\s*(?:[;&\\n|]|$)`);
 
 const POWERSHELL_ENV_DUMP_RE =
   /(?:Get-ChildItem|gci|dir|ls)\s+(?:-Path\s+|Path\s*=\s*)?Env:|\[System\.Environment\]::GetEnvironmentVariables/i;
@@ -208,7 +216,7 @@ function unwrapProcessWrapper(command: string[]): string[] | null {
 function detectShellEnvDump(script: string): string | null {
   if (POWERSHELL_ENV_DUMP_RE.test(script)) return "PowerShell Env:";
   if (SHELL_BARE_SET_RE.test(script)) return "set";
-  if (new RegExp(`${STMT_START}${SHELL_WRAPPER_PREFIX}${PRINTENV_PROG}`).test(script)) {
+  if (new RegExp(`${STMT_START}${DUMP_PREFIX}${PRINTENV_PROG}`).test(script)) {
     return "printenv";
   }
   if (/\bexport\s+-p\b/.test(script)) return "export -p";
@@ -218,12 +226,10 @@ function detectShellEnvDump(script: string): string | null {
   if (/\/(?:[^/\s;|&]+\/)+environ\b/.test(script)) return "/proc/*/environ";
 
   // Prefer a conservative `env` match: bare `env` / `env -0` style, not `env FOO=bar cmd`.
-  const bareEnv = new RegExp(`${STMT_START}${SHELL_WRAPPER_PREFIX}${ENV_PROG}\\s*(?:[;&\\n|]|$)`);
+  const bareEnv = new RegExp(`${STMT_START}${DUMP_PREFIX}${ENV_PROG}\\s*(?:[;&\\n|]|$)`);
   if (bareEnv.test(script)) return "env";
 
-  const envWithFlags = new RegExp(
-    `${STMT_START}${SHELL_WRAPPER_PREFIX}${ENV_PROG}\\s+-[a-zA-Z0-9]*[0u]`,
-  );
+  const envWithFlags = new RegExp(`${STMT_START}${DUMP_PREFIX}${ENV_PROG}\\s+-[a-zA-Z0-9]*[0u]`);
   if (envWithFlags.test(script)) {
     // `env -0` / `env -u` without a following command still dumps or is dump-adjacent; block
     // when there is no clear trailing command word after options/assignments.
