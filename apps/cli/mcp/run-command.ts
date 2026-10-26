@@ -21,11 +21,46 @@ const SHELL_PROGRAMS = new Set([
   "pwsh.exe",
 ]);
 
+/** argv[0] helpers that commonly wrap `env` / `printenv` / a shell. */
+const PROCESS_WRAPPERS = new Set([
+  "nice",
+  "nice.exe",
+  "stdbuf",
+  "stdbuf.exe",
+  "busybox",
+  "busybox.exe",
+]);
+
+/**
+ * Optional prefixes before a dump word inside a shell script:
+ * - `exec` / `command` / `builtin` with short flags or `--`
+ * - `nice` / `stdbuf` / `busybox` with short options / numeric args
+ * False-positives like `command -v env` are accepted — opt-in still unlocks them.
+ */
+const DUMP_PREFIX = String.raw`(?:(?:(?:exec|command|builtin)(?:\s+-\w+|\s+--)*|(?:nice|stdbuf|busybox)(?:\s+(?:-\S+|\d+))*)\s+)*`;
+
+/**
+ * Optional path to `env`/`printenv`: absolute (`/usr/local/bin/env`),
+ * relative (`./env`, `../usr/bin/env`), or bare basename.
+ */
+const ENV_PATH_PREFIX = String.raw`(?:(?:(?:\.\.?\/)+|\/)(?:[^\/\s;|&]+\/)*)?`;
+
+/** Absolute, relative, or bare `env`. */
+const ENV_PROG = String.raw`${ENV_PATH_PREFIX}env\b`;
+
+/** Absolute, relative, or bare `printenv`. */
+const PRINTENV_PROG = String.raw`${ENV_PATH_PREFIX}printenv\b`;
+
+/** Statement boundary before a dump command. */
+const STMT_START = String.raw`(?:^|[;&\n|]|&&|\|\|)\s*`;
+
 /** Bare `set` with no options/assignments — dumps the shell environment. */
-const SHELL_BARE_SET_RE = /(?:^|[;&\n|]|&&|\|\|)\s*set\s*(?:[;&\n|]|$)/;
+const SHELL_BARE_SET_RE = new RegExp(`${STMT_START}${DUMP_PREFIX}set\\s*(?:[;&\\n|]|$)`);
 
 const POWERSHELL_ENV_DUMP_RE =
   /(?:Get-ChildItem|gci|dir|ls)\s+(?:-Path\s+|Path\s*=\s*)?Env:|\[System\.Environment\]::GetEnvironmentVariables/i;
+
+const POWERSHELL_ENCODED_FLAGS = new Set(["-encodedcommand", "-enc", "-ec"]);
 
 interface RedactionEntry {
   key: string;
@@ -98,15 +133,104 @@ function extractShellScript(command: string[]): string | null {
   return null;
 }
 
+/** True when PowerShell is given an opaque `-EncodedCommand` (or short form). */
+function hasPowerShellEncodedCommand(command: string[]): boolean {
+  const prog = programBasename(command[0]!);
+  if (
+    prog !== "powershell" &&
+    prog !== "powershell.exe" &&
+    prog !== "pwsh" &&
+    prog !== "pwsh.exe"
+  ) {
+    return false;
+  }
+  for (let i = 1; i < command.length; i++) {
+    const flag = command[i]!.toLowerCase();
+    if (POWERSHELL_ENCODED_FLAGS.has(flag)) return true;
+    for (const prefix of POWERSHELL_ENCODED_FLAGS) {
+      if (flag.startsWith(`${prefix}:`)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Strip a single `nice` / `stdbuf` / `busybox` wrapper so the remaining argv can be re-checked.
+ * Returns null when this argv[0] is not a known wrapper or nothing remains after options.
+ */
+function unwrapProcessWrapper(command: string[]): string[] | null {
+  if (command.length < 2) return null;
+  const prog = programBasename(command[0]!);
+  if (!PROCESS_WRAPPERS.has(prog)) return null;
+
+  let i = 1;
+  if (prog === "busybox" || prog === "busybox.exe") {
+    while (i < command.length && command[i]!.startsWith("-")) i += 1;
+    return i < command.length ? command.slice(i) : null;
+  }
+
+  if (prog === "nice" || prog === "nice.exe") {
+    while (i < command.length) {
+      const arg = command[i]!;
+      if (arg === "-n" || arg === "--adjustment") {
+        i += 2;
+        continue;
+      }
+      if (arg.startsWith("-")) {
+        i += 1;
+        continue;
+      }
+      break;
+    }
+    return i < command.length ? command.slice(i) : null;
+  }
+
+  // stdbuf: -i/-o/-e take a following operand unless written as -oL.
+  while (i < command.length) {
+    const arg = command[i]!;
+    if (arg === "-i" || arg === "-o" || arg === "-e") {
+      i += 2;
+      continue;
+    }
+    if (arg.startsWith("--input=") || arg.startsWith("--output=") || arg.startsWith("--error=")) {
+      i += 1;
+      continue;
+    }
+    if (arg === "--input" || arg === "--output" || arg === "--error") {
+      i += 2;
+      continue;
+    }
+    if (/^-[ioe]./.test(arg)) {
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith("-")) {
+      i += 1;
+      continue;
+    }
+    break;
+  }
+  return i < command.length ? command.slice(i) : null;
+}
+
 function detectShellEnvDump(script: string): string | null {
   if (POWERSHELL_ENV_DUMP_RE.test(script)) return "PowerShell Env:";
   if (SHELL_BARE_SET_RE.test(script)) return "set";
-  if (/\bprintenv\b/.test(script)) return "printenv";
-  // Prefer a conservative `env` match: bare `env` / `env -0` style, not `env FOO=bar cmd`.
-  if (/(?:^|[;&\n|]|&&|\|\|)\s*(?:\/(?:usr\/)?bin\/)?env\s*(?:[;&\n|]|$)/.test(script)) {
-    return "env";
+  if (new RegExp(`${STMT_START}${DUMP_PREFIX}${PRINTENV_PROG}`).test(script)) {
+    return "printenv";
   }
-  if (/(?:^|[;&\n|]|&&|\|\|)\s*(?:\/(?:usr\/)?bin\/)?env\s+-[a-zA-Z0-9]*[0u]/.test(script)) {
+  if (/\bexport\s+-p\b/.test(script)) return "export -p";
+  if (/\bdeclare\s+-[A-Za-z]*[px][A-Za-z]*\b/.test(script)) return "declare";
+  if (/\btypeset\s+-[A-Za-z]*x[A-Za-z]*\b/.test(script)) return "typeset -x";
+  if (/\bcompgen\s+-e\b/.test(script)) return "compgen -e";
+  if (/\/(?:[^/\s;|&]+\/)+environ\b/.test(script)) return "/proc/*/environ";
+
+  // Prefer a conservative `env` match: bare `env` / `env -0` style, not `env FOO=bar cmd`.
+  const bareEnv = new RegExp(`${STMT_START}${DUMP_PREFIX}${ENV_PROG}\\s*(?:[;&\\n|]|$)`);
+  if (bareEnv.test(script)) return "env";
+
+  const envWithFlags = new RegExp(`${STMT_START}${DUMP_PREFIX}${ENV_PROG}\\s+-[a-zA-Z0-9]*[0u]`);
+  if (envWithFlags.test(script)) {
     // `env -0` / `env -u` without a following command still dumps or is dump-adjacent; block
     // when there is no clear trailing command word after options/assignments.
     const after = script.replace(/^[\s\S]*?\benv\b/, "env");
@@ -123,6 +247,9 @@ function detectShellEnvDump(script: string): string | null {
 export function detectEnvDumpCommand(command: string[]): string | null {
   if (command.length === 0) return null;
 
+  const unwrapped = unwrapProcessWrapper(command);
+  if (unwrapped) return detectEnvDumpCommand(unwrapped);
+
   const prog = programBasename(command[0]!);
 
   if (prog === "printenv" || prog === "printenv.exe") return "printenv";
@@ -132,6 +259,9 @@ export function detectEnvDumpCommand(command: string[]): string | null {
   }
 
   if ((prog === "set" || prog === "set.exe") && command.length === 1) return "set";
+
+  // Opaque encoded scripts bypass plaintext dump heuristics — require opt-in.
+  if (hasPowerShellEncodedCommand(command)) return "PowerShell -EncodedCommand";
 
   if (SHELL_PROGRAMS.has(prog)) {
     const script = extractShellScript(command);
